@@ -1,8 +1,14 @@
-OSI: conceptual framework for how networks communicate with each others.
-
+# Sockets
 Sockets are an abstraction provided by the OS to enable communication between different processes either on the same machine or over a network. They act as endpoints in a two-way communication channel. So that when two machines or two apps need to communicate to each others other the internet or a local network, each side of that communication will create a socket.
 
-Les sockets sont des canaux de communication qui permettent à des processus non liés d'échanger des données localement et sur des réseaux.
+# Socket type
+## Datagram (SOCK_DGRAM)
+In Internet Protocol terminology, the basic unit of data transfer is a datagram.
+It's the D in UDP
+## Stream (SOCK_STREAM)
+This type of socket is connection-oriented. Establish an end-to-end connection by using the bind(), listen(), accept(), and connect() APIs. SOCK_STREAM sends data without errors or duplication, and receives the data in the sending order.
+## Raw (SOCK_RAW)
+raaaw
 
 # socket fd states:
 
@@ -51,5 +57,6 @@ Connection socket (returned by accept()):
 
 A full-duplex channel between server and client.
 You can recv and send on the same fd.
-Each client gets its own. Close it when the conversation is done.
-So:
+
+
+poll.revents possible flags

@@ -156,10 +156,16 @@ ressources
 https://www.ibm.com/docs/en/i/7.2.0?topic=designs-example-nonblocking-io-select
 
 https://www.youtube.com/watch?v=D26sUZ6DHNQ
+https://www.ibm.com/docs/en/i/7.4.0?topic=programming-how-sockets-work
 
-
+in depth:
+https://beej.us/guide/bgnet/html/#audience
+https://broman.dev/download/The%20Linux%20Programming%20Interface.pdf
 
 
 ### todo
 
 poll() understanding
+
+epoll
+These event notification mechanisms drastically reduce CPU usage and latency by avoiding idle waiting or redundant polling.

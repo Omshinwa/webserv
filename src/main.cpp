@@ -73,7 +73,21 @@ void bind_socket(int fd)
     }
 }
 
-void do_something(char *buffer) { std::cout << "The message was: " << buffer; }
+// return false if an error occured
+bool serve_client(int fd)
+{
+    // first read from the fd:
+    char buf[1024];
+    ssize_t n = recv(fd, buf, sizeof(buf) - 1, 0);
+    if (n < 0)
+        std::cerr << colorC::red_bg << "poll error" << std::strerror(errno)
+                  << colorC::nl;
+    if (n <= 0)
+        return false;
+    // ... do something with the bytes
+    buf[n] = '\0';
+    std::cout << "The message was: " << buf;
+}
 
 // poll uses events and revents:
 // events  = your question  → "is this fd readable? writable?"
@@ -102,45 +116,55 @@ void poll_socket(int server_fd)
             if (fds[i].revents == 0)
                 continue;
 
-            if (fds[i].fd == server_fd) {
-                // Listening socket is readable -> a client wants to connect
-                int client_fd = accept(server_fd, NULL, NULL);
-                if (client_fd < 0)
-                    continue;
+            // 1. Errors first
+            if (fds[i].revents & (POLLHUP | POLLERR | POLLNVAL)) {
+                if (fds[i].fd == server_fd) {
+                    // listening socket died — fatal
+                    std::cerr << colorC::red_bg << "server fatal error"
+                              << colorC::nl;
+                    throw std::runtime_error("listening socket failed");
+                }
+                close(fds[i].fd);
+                fds.erase(fds.begin() + i);
+                i--;
+                continue;
+            }
 
-                // Make it non-blocking
-                fcntl(client_fd, F_SETFL, O_NONBLOCK);
+            // 2. Reads
+            if (fds[i].revents & POLLIN) {
+                if (fds[i].fd == server_fd) {
+                    // Listening socket is readable -> a client wants to connect
+                    int client_fd = accept(server_fd, NULL, NULL);
+                    if (client_fd < 0) {
+                        std::cerr << colorC::red_bg << "accept error"
+                                  << colorC::nl;
+                        std::cerr << std::strerror(errno) << "\n";
+                        continue;
+                    }
 
-                pollfd new_pfd;
-                new_pfd.fd = client_fd;
-                new_pfd.events = POLLIN;
-                new_pfd.revents = 0;
-                fds.push_back(new_pfd);
-            } else {
-                // A client fd is ready
-                if (fds[i].revents & POLLIN) {
-                    char buf[1024];
-                    ssize_t n = recv(fds[i].fd, buf, sizeof(buf), 0);
-                    if (n <= 0) {
+                    // Make it non-blocking
+                    fcntl(client_fd, F_SETFL, O_NONBLOCK);
+
+                    pollfd new_pfd;
+                    new_pfd.fd = client_fd;
+                    new_pfd.events = POLLIN;
+                    new_pfd.revents = 0;
+                    fds.push_back(new_pfd);
+                } else {
+                    // A client fd is ready
+                    if (!serve_client(fds[i].fd)) {
                         close(fds[i].fd);
                         fds.erase(fds.begin() + i);
                         i--; // adjust index after erase
                         continue;
                     }
-                    // ... do something with the bytes
-                    buf[n] = '\0';
-                    do_something(buf);
                     // To switch to "I want to write next":
                     // fds[i].events = POLLOUT;
                 }
+                // 3. Writes
                 if (fds[i].revents & POLLOUT) {
                     // send() pending response
                     // when done: fds[i].events = POLLIN;
-                }
-                if (fds[i].revents & (POLLHUP | POLLERR | POLLNVAL)) {
-                    close(fds[i].fd);
-                    fds.erase(fds.begin() + i);
-                    i--;
                 }
             }
         }
@@ -165,32 +189,15 @@ int accept_socket(int fd)
 
 int main()
 {
+    std::cout << colorC::white_bg << "SERVER START" << colorC::nl;
     int server_fd = create_socket();
 
     bind_socket(server_fd);
 
-    int client_fd;
-    client_fd = accept_socket(server_fd);
-    // poll_socket(server_fd);
-    while (1) {
-        // Read from the connection, recv is the read equivalent but
-        // specifically for sockets
-        char buffer[100];
-        ssize_t bytesRead = recv(client_fd, buffer, 100, 0);
-        if (bytesRead < 0)
-            throw std::runtime_error("read error");
-        if (bytesRead == 0)
-            break;
-        buffer[bytesRead] = '\0';
-        // null-terminate exactly at end of data
-        do_something(buffer);
-
-        // Send a message to the connection
-        std::string response = "OK\n";
-        send(client_fd, response.c_str(), response.size(), 0);
-    }
-    // Close the connections
-    close(client_fd);
-    close(server_fd);
+    // int client_fd;
+    // client_fd = accept_socket(server_fd);
+    poll_socket(server_fd);
+    // close(client_fd);
+    // close(server_fd);
     std::cout << colorC::white_bg << "PROGRAM END" << colorC::nl;
 }
