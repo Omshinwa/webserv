@@ -1,0 +1,14 @@
+BasedOnStyle: WebKit
+PointerAlignment: Right
+NamespaceIndentation: None
+ColumnLimit: 80
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: "^<criterion/.*>$"
+    Priority: 1
+  - Regex: '^<.*\.h>$'
+    Priority: 2
+  - Regex: "^<.*>$"
+    Priority: 3
+  - Regex: '^".*"$'
+    Priority: 4

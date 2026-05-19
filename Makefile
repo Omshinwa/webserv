@@ -1,0 +1,40 @@
+NAME = webserv
+
+# a changer avant la correction
+SRC =	src/main.cpp \
+		src/colorC.cpp
+
+OBJ = $(SRC:.cpp=.o)
+
+SRC_DIR = .
+OBJ_DIR = build
+
+SOURCE_FILES = $(addprefix $(SRC_DIR)/, $(SRC))
+OBJECT_FILES = $(addprefix $(OBJ_DIR)/, $(OBJ))
+DEPENDANCIES = $(OBJECT_FILES:.o=.d)
+
+CXX = c++ -Wall -Wextra -Werror -std=c++98 -g3 -MMD -MP
+
+# Rules
+all: $(NAME)
+
+# linking
+$(NAME): $(OBJECT_FILES) Makefile
+	$(CXX) $(OBJECT_FILES) -o $(NAME)
+
+# $(OBJECT_FILES): $(SOURCE_FILES)
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
+	mkdir -p $(dir $@)
+	$(CXX) -c $< -o $@
+
+-include $(DEPENDANCIES)
+
+clean:
+	rm -rf $(OBJ_DIR)
+
+fclean: clean
+	rm -f $(NAME)
+
+re: fclean all
+
+.PHONY: all clean fclean re
