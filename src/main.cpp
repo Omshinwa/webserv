@@ -30,51 +30,62 @@ std::ostream &operator<<(std::ostream &os, const sockaddr_in addr)
     return os;
 }
 
-// Creates a socket, returns the fd
+// Creates a socket
+// binds it
+// make it listen
+// returns the fd
 int create_socket()
 {
     int fd;
-    // AF_INET: IPv4 // AF_INET6: IPv6 // AF_UNIX: local Unix domain socket
-    fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (fd == -1) {
-        std::cerr << colorC::red_bg << "socket error" << colorC::nl;
-        throw std::runtime_error(std::strerror(errno));
+    // CREATE SOCKET DESCRIPTOR
+    {
+        // AF_INET: IPv4 // AF_INET6: IPv6 // AF_UNIX: local Unix domain socket
+        fd = socket(AF_INET, SOCK_STREAM, 0);
+        if (fd == -1) {
+            std::cerr << colorC::red_bg << "socket error" << colorC::nl;
+            throw std::runtime_error(std::strerror(errno));
+        }
+        std::cout << colorC::c(fd) << "NEW Server Socket FD: " << fd
+                  << colorC::nl;
+
+        // Allows to restart without TIME WAIT
+        int opt = 1;
+        setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+
+        fcntl(fd, F_SETFL, O_NONBLOCK); // Make it non-blocking
     }
-    std::cout << colorC::cyan << "Server Socket FD: " << fd << colorC::nl;
 
-    // Allows to restart without TIME WAIT
-    int opt = 1;
-    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    // BIND
+    {
+        struct sockaddr_in addr;
 
-    return fd;
-}
+        std::memset(&addr, 0, sizeof(addr));
+        // zero it first — there are padding fields
+        addr.sin_family = AF_INET; // must match the socket()'s domain
+        addr.sin_port = htons(8080); // port, in network byte order!
+        addr.sin_addr.s_addr = htonl(INADDR_ANY); // listen on all interfaces
 
-void bind_socket(int fd)
-{
-    struct sockaddr_in addr;
-
-    std::memset(&addr, 0, sizeof(addr));
-    // zero it first — there are padding fields
-    addr.sin_family = AF_INET; // must match the socket()'s domain
-    addr.sin_port = htons(8080); // port, in network byte order!
-    addr.sin_addr.s_addr = htonl(INADDR_ANY); // listen on all interfaces
-
-    if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
-        std::cerr << colorC::red_bg << "bind error" << colorC::nl;
-        throw std::runtime_error(std::strerror(errno));
+        if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
+            std::cerr << colorC::red_bg << "bind error" << colorC::nl;
+            throw std::runtime_error(std::strerror(errno));
+        }
+        std::cout << "Listening to: \n";
+        std::cout << addr;
     }
-    std::cout << "BIND LISTENING: \n";
-    std::cout << addr;
 
+    // LISTENING
     // Start listening. Hold at most 10 connections in the queue
-    if (listen(fd, 10) < 0) {
+    int MAX_CONNEXION = 10;
+    if (listen(fd, MAX_CONNEXION) < 0) {
         std::cerr << colorC::red_bg << "listen error" << colorC::nl;
         throw std::runtime_error(std::strerror(errno));
     }
+    return fd;
 }
 
+// when the sockets are ready, we handle received data
 // return false if an error occured
-bool serve_client(int fd)
+bool receive_from_client(int fd)
 {
     // first read from the fd:
     char buf[1024];
@@ -86,12 +97,35 @@ bool serve_client(int fd)
         return false;
     // ... do something with the bytes
     buf[n] = '\0';
-    std::cout << "The message was: " << buf;
+    std::cout << colorC::c(fd) << "FD " << fd << " said:\n  " << buf
+              << colorC::reset;
+    return true;
 }
 
+// Grab a connection from the queue
+// returns the fd
+int accept_socket(int fd)
+{
+    struct sockaddr_in addr;
+    socklen_t addrlen = sizeof(addr);
+    int connection_fd = accept(fd, (struct sockaddr *)&addr, &addrlen);
+    if (connection_fd < 0) {
+        std::cerr << colorC::red_bg << "accept error: " << std::strerror(errno)
+                  << colorC::nl;
+        return (connection_fd);
+    }
+    std::cout << colorC::c(connection_fd)
+              << "NEW Client Socket FD: " << connection_fd << colorC::nl;
+    std::cout << addr;
+
+    fcntl(connection_fd, F_SETFL, O_NONBLOCK); // Make it non-blocking
+    return (connection_fd);
+}
 // poll uses events and revents:
 // events  = your question  → "is this fd readable? writable?"
 // revents = the answer     → "yes readable / yes writable / hung up / error"
+// You could either use epoll (linux only, faster/more optimized), or poll (scan
+// is O(N) but unix portable)
 void poll_socket(int server_fd)
 {
     std::vector<pollfd> fds;
@@ -134,17 +168,9 @@ void poll_socket(int server_fd)
             if (fds[i].revents & POLLIN) {
                 if (fds[i].fd == server_fd) {
                     // Listening socket is readable -> a client wants to connect
-                    int client_fd = accept(server_fd, NULL, NULL);
-                    if (client_fd < 0) {
-                        std::cerr << colorC::red_bg << "accept error"
-                                  << colorC::nl;
-                        std::cerr << std::strerror(errno) << "\n";
+                    int client_fd = accept_socket(server_fd);
+                    if (client_fd < 0)
                         continue;
-                    }
-
-                    // Make it non-blocking
-                    fcntl(client_fd, F_SETFL, O_NONBLOCK);
-
                     pollfd new_pfd;
                     new_pfd.fd = client_fd;
                     new_pfd.events = POLLIN;
@@ -152,52 +178,32 @@ void poll_socket(int server_fd)
                     fds.push_back(new_pfd);
                 } else {
                     // A client fd is ready
-                    if (!serve_client(fds[i].fd)) {
+                    if (!receive_from_client(fds[i].fd)) {
                         close(fds[i].fd);
                         fds.erase(fds.begin() + i);
                         i--; // adjust index after erase
                         continue;
                     }
                     // To switch to "I want to write next":
-                    // fds[i].events = POLLOUT;
+                    fds[i].events = POLLOUT;
                 }
-                // 3. Writes
-                if (fds[i].revents & POLLOUT) {
-                    // send() pending response
-                    // when done: fds[i].events = POLLIN;
-                }
+            }
+            // 3. Writes
+            if (fds[i].revents & POLLOUT) {
+                // send() pending response
+                // when done: fds[i].events = POLLIN;
+                std::string buffer = "AKNOWLEDGED\n";
+                send(fds[i].fd, buffer.c_str(), buffer.size(), 0);
+                fds[i].events = POLLIN;
             }
         }
     }
-}
-
-// Grab a connection from the queue
-int accept_socket(int fd)
-{
-    struct sockaddr_in addr;
-    socklen_t addrlen = sizeof(addr);
-    int connection_fd = accept(fd, (struct sockaddr *)&addr, &addrlen);
-    if (connection_fd < 0) {
-        std::cerr << colorC::red_bg << "accept error" << colorC::nl;
-        throw std::runtime_error(std::strerror(errno));
-    }
-    std::cout << addr;
-    std::cout << colorC::cyan << "Client Socket FD: " << connection_fd
-              << colorC::nl;
-    return (connection_fd);
 }
 
 int main()
 {
     std::cout << colorC::white_bg << "SERVER START" << colorC::nl;
     int server_fd = create_socket();
-
-    bind_socket(server_fd);
-
-    // int client_fd;
-    // client_fd = accept_socket(server_fd);
     poll_socket(server_fd);
-    // close(client_fd);
-    // close(server_fd);
     std::cout << colorC::white_bg << "PROGRAM END" << colorC::nl;
 }

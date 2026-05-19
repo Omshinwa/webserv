@@ -29,6 +29,8 @@ extern const std::string underline;
 extern const std::string reset;
 extern const std::string nl;
 
+const std::string &c(size_t n);
+
 }
 
 #endif

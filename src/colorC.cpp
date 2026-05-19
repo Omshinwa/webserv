@@ -26,4 +26,11 @@ const std::string underline = "\033[4m";
 const std::string reset = "\033[0m";
 const std::string nl = "\033[0m\n";
 
+const std::string &c(size_t n)
+{
+    static const std::string palette[]
+        = { red, green, yellow, blue, magenta, cyan };
+    static const size_t N = sizeof(palette) / sizeof(palette[0]);
+    return palette[n % N];
+}
 }

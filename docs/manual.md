@@ -1,16 +1,16 @@
-# Sockets
+# **Sockets**
 Sockets are an abstraction provided by the OS to enable communication between different processes either on the same machine or over a network. They act as endpoints in a two-way communication channel. So that when two machines or two apps need to communicate to each others other the internet or a local network, each side of that communication will create a socket.
 
-# Socket type
-## Datagram (SOCK_DGRAM)
+## **Socket type**
+### Datagram (SOCK_DGRAM)
 In Internet Protocol terminology, the basic unit of data transfer is a datagram.
 It's the D in UDP
-## Stream (SOCK_STREAM)
+### Stream (SOCK_STREAM)
 This type of socket is connection-oriented. Establish an end-to-end connection by using the bind(), listen(), accept(), and connect() APIs. SOCK_STREAM sends data without errors or duplication, and receives the data in the sending order.
-## Raw (SOCK_RAW)
-raaaw
+### Raw (SOCK_RAW)
+raaw
 
-# socket fd states:
+# **socket fd states**:
 
 | State         | How you get there   | What you can do                                   |
 |---------------|---------------------|---------------------------------------------------|
@@ -59,4 +59,26 @@ A full-duplex channel between server and client.
 You can recv and send on the same fd.
 
 
-poll.revents possible flags
+# **POLL**
+poll.revents is a bitmask, the main values to care about:
+
+* POLLIN: Ready to read
+* POLLOUT: Writing wont block
+
+* POLLHUP: _Hang up_ Peer closed cleaned, end of conversation
+_FAILURES_
+* POLLERR: _Error_
+* POLLNVAL: _Invalidm_ the fd in the `pollfd` struct is not valid fd. (almost always a bug in the code, not a network event)
+
+**fcntl(fd, F_SETFL, O_NONBLOCK);**
+_What "blocking" means:_
+
+A syscall is blocking when it puts your thread to sleep until the operation can complete. The OS suspends your process; the CPU runs other things; you wake up when the kernel has something for you.
+
+For each socket call, "nothing to do" looks different:
+
+* `accept()` blocks when the listen queue is empty (no client is connecting).
+* `recv()` blocks when the receive buffer is empty (peer hasn't sent anything).
+* `send()` blocks when the kernel's send buffer is full (peer isn't draining fast enough).
+
+A non-blocking fd: instead of sleeping, the syscall returns -1 immediately and sets errno to EAGAIN/EWOULDBLOCK. The thread keeps running.
