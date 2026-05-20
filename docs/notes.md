@@ -165,7 +165,10 @@ https://broman.dev/download/The%20Linux%20Programming%20Interface.pdf
 
 ### todo
 
-poll() understanding
+A reasonable class breakdown:
 
-epoll
-These event notification mechanisms drastically reduce CPU usage and latency by avoiding idle waiting or redundant polling.
+Server — listening sockets + the poll loop
+Connection — per-client state: fd, recv/send buffers, parsing state machine
+Request / Response — parsed data + response builder
+Config / Location — parsed config and route matching
+CGI — child process + pipe management

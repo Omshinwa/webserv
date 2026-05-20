@@ -1,5 +1,7 @@
 #include "colorC.hpp"
 
+#include <iostream>
+
 namespace colorC {
 
 const std::string red = "\033[31m";
@@ -26,11 +28,24 @@ const std::string underline = "\033[4m";
 const std::string reset = "\033[0m";
 const std::string nl = "\033[0m\n";
 
-const std::string &c(size_t n)
+const std::string c(int n)
 {
     static const std::string palette[]
         = { red, green, yellow, blue, magenta, cyan };
-    static const size_t N = sizeof(palette) / sizeof(palette[0]);
+    static const int N = sizeof(palette) / sizeof(palette[0]);
     return palette[n % N];
 }
+
+const std::string b(int n)
+{
+    static const std::string palette[]
+        = { red_bg, green_bg, yellow_bg, blue_bg, magenta_bg, cyan_bg };
+    static const int N = sizeof(palette) / sizeof(palette[0]);
+    return c(n) + palette[n % N];
+}
+
+void print_err(const std::string s) { std::cerr << red << s << nl; }
+
+void print(const int fd, const std::string s) { std::cout << c(fd) << s << nl; }
+
 }

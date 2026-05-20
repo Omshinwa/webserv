@@ -1,23 +1,5 @@
-// POSIX libraries
-#include <fcntl.h>
-#include <netdb.h>
-#include <netinet/in.h> // AF_INET, sockaddr_in (and for bind() next)
-#include <poll.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <unistd.h>
-
-#include <cstring>
-#include <exception>
-#include <iostream>
-#include <stdexcept>
-#include <vector>
-
-// my libraries
-#include "colorC.hpp"
-
-// FUNCTIONS:
-// socket, bind, listen, accept, recv, send, close
+#include "common.h"
+#include "service.cpp"
 
 std::ostream &operator<<(std::ostream &os, const sockaddr_in addr)
 {
@@ -45,7 +27,7 @@ int create_socket()
             std::cerr << colorC::red_bg << "socket error" << colorC::nl;
             throw std::runtime_error(std::strerror(errno));
         }
-        std::cout << colorC::c(fd) << "NEW Server Socket FD: " << fd
+        std::cout << colorC::b(fd) << "NEW Server Socket FD: " << fd
                   << colorC::nl;
 
         // Allows to restart without TIME WAIT
@@ -83,25 +65,6 @@ int create_socket()
     return fd;
 }
 
-// when the sockets are ready, we handle received data
-// return false if an error occured
-bool receive_from_client(int fd)
-{
-    // first read from the fd:
-    char buf[1024];
-    ssize_t n = recv(fd, buf, sizeof(buf) - 1, 0);
-    if (n < 0)
-        std::cerr << colorC::red_bg << "poll error" << std::strerror(errno)
-                  << colorC::nl;
-    if (n <= 0)
-        return false;
-    // ... do something with the bytes
-    buf[n] = '\0';
-    std::cout << colorC::c(fd) << "FD " << fd << " said:\n  " << buf
-              << colorC::reset;
-    return true;
-}
-
 // Grab a connection from the queue
 // returns the fd
 int accept_socket(int fd)
@@ -114,7 +77,7 @@ int accept_socket(int fd)
                   << colorC::nl;
         return (connection_fd);
     }
-    std::cout << colorC::c(connection_fd)
+    std::cout << colorC::b(connection_fd)
               << "NEW Client Socket FD: " << connection_fd << colorC::nl;
     std::cout << addr;
 
@@ -191,10 +154,15 @@ void poll_socket(int server_fd)
             // 3. Writes
             if (fds[i].revents & POLLOUT) {
                 // send() pending response
-                // when done: fds[i].events = POLLIN;
-                std::string buffer = "AKNOWLEDGED\n";
-                send(fds[i].fd, buffer.c_str(), buffer.size(), 0);
-                fds[i].events = POLLIN;
+                if (!send_to_client(fds[i].fd) || HTTP_VER == 1.0) {
+                    close(fds[i].fd);
+                    fds.erase(fds.begin() + i);
+                    i--; // adjust index after erase
+                    continue;
+                }
+                // when done: fds[i].events = POLLIN; this is HTTP/1.1 style
+                if (HTTP_VER == 1.1)
+                    fds[i].events = POLLIN;
             }
         }
     }

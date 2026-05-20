@@ -29,8 +29,14 @@ extern const std::string underline;
 extern const std::string reset;
 extern const std::string nl;
 
-const std::string &c(size_t n);
+// FUNCTIONS
 
+const std::string c(int n);
+const std::string b(int n);
+
+void print_err(const std::string s);
+
+void print(const int fd, const std::string s);
 }
 
 #endif

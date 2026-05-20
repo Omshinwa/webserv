@@ -1,5 +1,15 @@
+## Contents
+- [Sockets](#sockets)
+  - [Socket type](#socket-type)
+- [socket fd states](#socket-fd-states)
+- [POLL](#poll)
+
 # **Sockets**
 Sockets are an abstraction provided by the OS to enable communication between different processes either on the same machine or over a network. They act as endpoints in a two-way communication channel. So that when two machines or two apps need to communicate to each others other the internet or a local network, each side of that communication will create a socket.
+
+typical flow:
+
+![Socket flow](socket_flow.png)
 
 ## **Socket type**
 ### Datagram (SOCK_DGRAM)
@@ -21,6 +31,7 @@ raaw
 | **Shut down (one side)** | `shutdown(fd, SHUT_RD/WR)` | Other direction still works     |
 | **Closed**    | `close()`           | fd is gone                                        |
 
+---
 
 **`int socket(int __domain, int __type, int __protocol)`**  
     creates a socket fd (for communication). A socker fd is a fd plus a 5-tuple of state the kernel maintains: (protocol, local IP, local port, remote IP, remote port). Reachable from other processes, other machines, the internet.  
@@ -46,20 +57,23 @@ raaw
     ADDR is set to the address and ADD_LEN set to the length  
     returns a new **connected** socket  
 
+---
 
-What each fd actually does
-Listening socket (from socket() + bind() + listen()):
+**Listening socket (from socket() + bind() + listen())**:
 
 Its only job is to wait for incoming connection requests.
 You never recv/send data on it. Doing so would error out.
 The only thing you do with it is accept(), which pulls the next pending connection off its queue.
-Connection socket (returned by accept()):
 
-A full-duplex channel between server and client.
-You can recv and send on the same fd.
+**Connection socket (returned by accept())**:
+
+A full-bidirectionnal channel between server and client. You can recv and send on the same fd.
 
 
 # **POLL**
+
+select, poll, epoll, allows to create a poll of sockets where you handle the ones that are ready.
+
 poll.revents is a bitmask, the main values to care about:
 
 * POLLIN: Ready to read
@@ -69,6 +83,9 @@ poll.revents is a bitmask, the main values to care about:
 _FAILURES_
 * POLLERR: _Error_
 * POLLNVAL: _Invalidm_ the fd in the `pollfd` struct is not valid fd. (almost always a bug in the code, not a network event)
+
+epoll vs poll
+These event notification mechanisms drastically reduce CPU usage and latency by avoiding idle waiting or redundant polling.
 
 **fcntl(fd, F_SETFL, O_NONBLOCK);**
 _What "blocking" means:_
@@ -82,3 +99,4 @@ For each socket call, "nothing to do" looks different:
 * `send()` blocks when the kernel's send buffer is full (peer isn't draining fast enough).
 
 A non-blocking fd: instead of sleeping, the syscall returns -1 immediately and sets errno to EAGAIN/EWOULDBLOCK. The thread keeps running.
+
