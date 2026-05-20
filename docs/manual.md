@@ -3,6 +3,7 @@
   - [Socket type](#socket-type)
 - [socket fd states](#socket-fd-states)
 - [POLL](#poll)
+- [HTTP](#http)
 
 # **Sockets**
 Sockets are an abstraction provided by the OS to enable communication between different processes either on the same machine or over a network. They act as endpoints in a two-way communication channel. So that when two machines or two apps need to communicate to each others other the internet or a local network, each side of that communication will create a socket.
@@ -100,3 +101,7 @@ For each socket call, "nothing to do" looks different:
 
 A non-blocking fd: instead of sleeping, the syscall returns -1 immediately and sets errno to EAGAIN/EWOULDBLOCK. The thread keeps running.
 
+# HTTP
+
+## \r\n vs \n
+CRLF means Carriage Return + Line Feed.

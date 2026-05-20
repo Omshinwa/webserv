@@ -21,8 +21,26 @@ start-line     = request-line / status-line
 **status-line** = `HTTP-version SP status-code SP [ reason-phrase ]`
 
 
-# \r\n vs \n
-# CRLF means Carriage Return + Line Feed.
+# project file structure
+
+webserv/
+├── Makefile
+├── README.md
+├── configs/              # nginx-style .conf files
+│   └── default.conf
+├── docs/                 # already there
+├── src/
+│   ├── main.cpp
+│   ├── server/          # Server, event loop, Connection
+│   ├── http/            # Request parser, Response builder
+│   ├── config/          # config file parser
+│   ├── cgi/             # CGI execution
+│   └── utils/           # logging, colors, helpers
+├── www/                  # default document root
+│   ├── index.html
+│   ├── errors/          # 404.html, 500.html
+│   └── cgi-bin/
+└── tests/                # curl/siege scripts, sample requests
 
 
 Makefile, *.{h, hpp}, *.cpp, *.tpp, *.ipp,

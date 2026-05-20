@@ -18,4 +18,7 @@
 #include "colorC.hpp"
 
 #define HTTP_VER 1.1 // or 1.1
+
+std::ostream &operator<<(std::ostream &os, const sockaddr_in &addr);
+
 #endif

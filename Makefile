@@ -2,7 +2,9 @@ NAME = webserv
 
 # a changer avant la correction
 SRC =	src/main.cpp \
-		src/colorC.cpp
+		src/utils/colorC.cpp \
+		src/server/Connexion.cpp \
+		src/server/Server.cpp
 
 OBJ = $(SRC:.cpp=.o)
 
@@ -13,7 +15,9 @@ SOURCE_FILES = $(addprefix $(SRC_DIR)/, $(SRC))
 OBJECT_FILES = $(addprefix $(OBJ_DIR)/, $(OBJ))
 DEPENDANCIES = $(OBJECT_FILES:.o=.d)
 
-CXX = c++ -Wall -Wextra -Werror -std=c++98 -g3 -MMD -MP
+INCLUDES = -I src -I src/utils -I src/server
+
+CXX = c++ -Wall -Wextra -Werror -std=c++98 -g3 -MMD -MP $(INCLUDES)
 
 # Rules
 all: $(NAME)
