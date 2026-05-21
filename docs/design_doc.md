@@ -1,4 +1,8 @@
-**What you'll actually learn, ranked by how much of the project it is**
+# Log levels
+
+
+
+# **What you'll actually learn, ranked by how much of the project it is**
 
 1. **Event-driven network programming.** Sockets, poll(), state machines per connection, buffering reads until you have a complete request, buffering writes until the kernel accepts them. This is ~60% of the difficulty.
 2. **HTTP as a wire protocol.** Parsing a text-based request, building a correct response, handling chunked bodies, getting status codes right. ~20%.
@@ -190,3 +194,12 @@ Connection — per-client state: fd, recv/send buffers, parsing state machine
 Request / Response — parsed data + response builder
 Config / Location — parsed config and route matching
 CGI — child process + pipe management
+
+
+
+
+# Ai use:
+
+stupid function writing (like std::cout << addr operator) or color convertor
+advices on architecture
+refactor (make fd a public attribute)

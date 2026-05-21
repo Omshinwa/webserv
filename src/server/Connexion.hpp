@@ -14,12 +14,13 @@ public:
         CLOSING // mark for removal from poll set
     };
 
+    const int fd;
+    const sockaddr_in addr;
+
     Connexion(int fd, const sockaddr_in &addr);
     ~Connexion();
 
-    int fd() const;
     State state() const;
-    const sockaddr_in &addr() const;
 
     // Pull bytes from the socket into _recv_buf.
     // Returns bytes read, 0 on peer close, -1 on error.
@@ -33,17 +34,17 @@ public:
     // Once you've parsed a complete request, build the response and call this.
     void queue_response(const std::string &resp);
 
-    std::string &recv_buf();
-    const std::string &recv_buf() const;
-
 private:
-    const int _fd;
-    sockaddr_in _addr;
     State _state;
     std::string _recv_buf;
     std::string _send_buf;
     size_t _send_offset;
 
+    // log
+    void log_info(std::string s);
+    void log_event(std::string s);
+
+    // NOT USED
     // fds are not safely copyable — destructor closes
     // we only allow 1 Connexion for each fd.
     Connexion(const Connexion &);

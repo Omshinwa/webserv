@@ -15,9 +15,10 @@
 #include <stdexcept>
 #include <vector>
 
-#include "colorC.hpp"
+#include "Log.hpp"
+#include "conversion.hpp"
 
-#define HTTP_VER 1.1 // or 1.1
+#define USE_HTTP_1_1 1
 
 std::ostream &operator<<(std::ostream &os, const sockaddr_in &addr);
 

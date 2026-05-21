@@ -11,7 +11,7 @@
 #include <stdexcept>
 
 #include "Connexion.hpp"
-#include "colorC.hpp"
+#include "Log.hpp"
 #include "common.h"
 
 std::ostream &operator<<(std::ostream &os, const sockaddr_in &addr)
@@ -40,7 +40,7 @@ Server::Server(int port)
 Server::~Server()
 {
     for (std::map<int, Connexion *>::iterator it = _connexions.begin();
-         it != _connexions.end(); ++it) {
+        it != _connexions.end(); ++it) {
         delete it->second; // destructor closes fd
     }
     if (_listen_fd >= 0)
@@ -53,11 +53,11 @@ void Server::_setup_listening_socket()
     // AF_INET: IPv4 // AF_INET6: IPv6 // AF_UNIX: local Unix domain socket
     _listen_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (_listen_fd == -1) {
-        std::cerr << colorC::red_bg << "socket error" << colorC::nl;
+        std::cerr << Log::red_bg << "socket error" << Log::nl;
         throw std::runtime_error(std::strerror(errno));
     }
-    std::cout << colorC::b(_listen_fd) << "NEW Server Socket FD: " << _listen_fd
-              << colorC::nl;
+    std::cout << Log::b(_listen_fd) << "NEW Server Socket FD: " << _listen_fd
+              << Log::nl;
 
     // Allows to restart without TIME_WAIT
     int opt = 1;
@@ -72,14 +72,14 @@ void Server::_setup_listening_socket()
     addr.sin_addr.s_addr = htonl(INADDR_ANY); // listen on all interfaces
 
     if (bind(_listen_fd, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
-        std::cerr << colorC::red_bg << "bind error" << colorC::nl;
+        std::cerr << Log::red_bg << "bind error" << Log::nl;
         throw std::runtime_error(std::strerror(errno));
     }
     std::cout << "Listening to: \n" << addr;
 
     const int MAX_CONNEXION = 10;
     if (listen(_listen_fd, MAX_CONNEXION) < 0) {
-        std::cerr << colorC::red_bg << "listen error" << colorC::nl;
+        std::cerr << Log::red_bg << "listen error" << Log::nl;
         throw std::runtime_error(std::strerror(errno));
     }
 }
@@ -89,10 +89,13 @@ void Server::_setup_listening_socket()
 // revents = the answer     → "yes readable / yes writable / hung up / error"
 void Server::run()
 {
+    std::cout << Log::white_bg << "SERVER START" << Log::nl;
     while (true) {
         int n = poll(&_pollfds[0], _pollfds.size(), -1); // -1 = wait forever
         if (n < 0) {
-            std::cerr << colorC::red_bg << "poll error" << colorC::nl;
+            if (errno == EINTR) // signal interrupted, just retry
+                continue;
+            std::cerr << Log::red_bg << "poll error" << Log::nl;
             throw std::runtime_error(std::strerror(errno));
         }
 
@@ -111,7 +114,7 @@ void Server::_handle_event(size_t &i)
     // 1. Errors first
     if (pfd.revents & (POLLHUP | POLLERR | POLLNVAL)) {
         if (pfd.fd == _listen_fd) {
-            std::cerr << colorC::red_bg << "server fatal error" << colorC::nl;
+            std::cerr << Log::red_bg << "server fatal error" << Log::nl;
             throw std::runtime_error("listening socket failed");
         }
         _drop(i);
@@ -144,13 +147,13 @@ void Server::_handle_event(size_t &i)
             i--;
             return;
         }
-        if (c->state() == Connexion::CLOSING || HTTP_VER == 1.0) {
+        if (c->state() == Connexion::CLOSING || !USE_HTTP_1_1) {
             _drop(i);
             i--;
             return;
         }
         // HTTP/1.1: response sent but keep-alive — flip back to reading
-        if (HTTP_VER == 1.1)
+        if (USE_HTTP_1_1)
             pfd.events = POLLIN;
     }
 }
@@ -161,8 +164,8 @@ void Server::_accept_new()
     socklen_t addrlen = sizeof(addr);
     int client_fd = accept(_listen_fd, (struct sockaddr *)&addr, &addrlen);
     if (client_fd < 0) {
-        std::cerr << colorC::red_bg << "accept error: " << std::strerror(errno)
-                  << colorC::nl;
+        std::cerr << Log::red_bg << "accept error: " << std::strerror(errno)
+                  << Log::nl;
         return;
     }
 
@@ -193,8 +196,7 @@ std::string Server::_build_response()
     const std::string filepath = "./www/index.html";
     std::ifstream file(filepath.c_str(), std::ios::binary);
     if (!file.is_open()) {
-        std::string body
-            = "<h1>500</h1><p>Failed to open local file.</p>\n";
+        std::string body = "<h1>500</h1><p>Failed to open local file.</p>\n";
         std::ostringstream resp;
         resp << "HTTP/1.1 500 Internal Server Error\r\n"
              << "Content-Type: text/html\r\n"
@@ -202,8 +204,8 @@ std::string Server::_build_response()
              << "Connection: close\r\n"
              << "\r\n"
              << body;
-        colorC::print_err("failed to open local file:");
-        colorC::print_err(std::strerror(errno));
+        Log::error("failed to open local file:");
+        Log::error(std::strerror(errno));
         return resp.str();
     }
 

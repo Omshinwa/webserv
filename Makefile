@@ -2,7 +2,7 @@ NAME = webserv
 
 # a changer avant la correction
 SRC =	src/main.cpp \
-		src/utils/colorC.cpp \
+		src/utils/Log.cpp \
 		src/server/Connexion.cpp \
 		src/server/Server.cpp
 
