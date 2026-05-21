@@ -9,7 +9,7 @@ int main()
         Server server(8080);
         server.run();
     } catch (const std::exception &e) {
-        std::cerr << colorC::red_bg << e.what() << colorC::nl;
+        colorC::print_err(e.what());
         return 1;
     }
     std::cout << colorC::white_bg << "PROGRAM END" << colorC::nl;
