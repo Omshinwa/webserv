@@ -13,7 +13,6 @@ Connexion::Connexion(int fd, const sockaddr_in &addr)
     , _send_offset(0)
 {
     fcntl(fd, F_SETFL, O_NONBLOCK);
-    log_event("NEW Client Socket FD: " + to_string(fd));
     std::cout << addr;
 }
 
@@ -33,7 +32,7 @@ ssize_t Connexion::do_recv()
     if (n > 0) {
         _recv_buf.append(buf, n);
         buf[n] = '\0';
-        log_info("   file descriptor" + to_string(fd) + " sent: \n" + buf);
+        log_info("  !  file descriptor " + to_string(fd) + " sent: \n" + buf);
     } else if (n == 0) {
         _state = CLOSING; // peer closed cleanly
     }
@@ -64,7 +63,16 @@ void Connexion::queue_response(const std::string &resp)
     _state = WRITING;
 }
 
-//// LOGS
+//  █████          ███████      █████████   █████████
+// ▒▒███         ███▒▒▒▒▒███   ███▒▒▒▒▒███ ███▒▒▒▒▒███
+//  ▒███        ███     ▒▒███ ███     ▒▒▒ ▒███    ▒▒▒
+//  ▒███       ▒███      ▒███▒███         ▒▒█████████
+//  ▒███       ▒███      ▒███▒███    █████ ▒▒▒▒▒▒▒▒███
+//  ▒███      █▒▒███     ███ ▒▒███  ▒▒███  ███    ▒███
+//  ███████████ ▒▒▒███████▒   ▒▒█████████ ▒▒█████████
+// ▒▒▒▒▒▒▒▒▒▒▒    ▒▒▒▒▒▒▒      ▒▒▒▒▒▒▒▒▒   ▒▒▒▒▒▒▒▒▒
+//
+//
 
 void Connexion::log_info(std::string s)
 {

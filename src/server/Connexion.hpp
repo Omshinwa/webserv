@@ -40,13 +40,16 @@ private:
     std::string _send_buf;
     size_t _send_offset;
 
-    // log
+    // LOG
+
+    void log_debug(std::string s);
     void log_info(std::string s);
     void log_event(std::string s);
+    void log_error(std::string s);
 
-    // NOT USED
-    // fds are not safely copyable — destructor closes
-    // we only allow 1 Connexion for each fd.
+    // INNACCESSIBLE
+    // we dont allow several Connexion for one fd
+
     Connexion(const Connexion &);
     Connexion &operator=(const Connexion &);
 };
