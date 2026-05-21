@@ -18,7 +18,7 @@ public:
     void run(); // main poll loop, blocks forever
 
 private:
-    int _listen_fd;
+    int _fd;
     int _port;
     std::vector<pollfd> _pollfds;
     std::map<int, Connexion *> _connexions;

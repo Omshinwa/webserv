@@ -25,13 +25,13 @@ std::ostream &operator<<(std::ostream &os, const sockaddr_in &addr)
 }
 
 Server::Server(int port)
-    : _listen_fd(-1)
+    : _fd(-1)
     , _port(port)
 {
     _setup_listening_socket();
 
     pollfd listen_pfd;
-    listen_pfd.fd = _listen_fd;
+    listen_pfd.fd = _fd;
     listen_pfd.events = POLLIN;
     listen_pfd.revents = 0;
     _pollfds.push_back(listen_pfd);
@@ -39,31 +39,31 @@ Server::Server(int port)
 
 Server::~Server()
 {
+    Log::debug("~Destructor Server fd " + to_string(_fd));
     for (std::map<int, Connexion *>::iterator it = _connexions.begin();
         it != _connexions.end(); ++it) {
         delete it->second; // destructor closes fd
     }
-    if (_listen_fd >= 0)
-        close(_listen_fd);
+    if (_fd >= 0)
+        close(_fd);
 }
 
 // create socket -> setsockopt -> nonblock -> bind -> listen
 void Server::_setup_listening_socket()
 {
     // AF_INET: IPv4 // AF_INET6: IPv6 // AF_UNIX: local Unix domain socket
-    _listen_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (_listen_fd == -1) {
+    _fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (_fd == -1) {
         std::cerr << Log::red_bg << "socket error" << Log::nl;
         throw std::runtime_error(std::strerror(errno));
     }
-    std::cout << Log::b(_listen_fd) << "NEW Server Socket FD: " << _listen_fd
-              << Log::nl;
+    std::cout << Log::b(_fd) << "NEW Server Socket FD: " << _fd << Log::nl;
 
     // Allows to restart without TIME_WAIT
     int opt = 1;
-    setsockopt(_listen_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    setsockopt(_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
-    fcntl(_listen_fd, F_SETFL, O_NONBLOCK);
+    fcntl(_fd, F_SETFL, O_NONBLOCK);
 
     sockaddr_in addr;
     std::memset(&addr, 0, sizeof(addr)); // zero — there are padding fields
@@ -71,14 +71,14 @@ void Server::_setup_listening_socket()
     addr.sin_port = htons(_port); // network byte order
     addr.sin_addr.s_addr = htonl(INADDR_ANY); // listen on all interfaces
 
-    if (bind(_listen_fd, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
+    if (bind(_fd, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
         std::cerr << Log::red_bg << "bind error" << Log::nl;
         throw std::runtime_error(std::strerror(errno));
     }
     std::cout << "Listening to: \n" << addr;
 
     const int MAX_CONNEXION = 10;
-    if (listen(_listen_fd, MAX_CONNEXION) < 0) {
+    if (listen(_fd, MAX_CONNEXION) < 0) {
         std::cerr << Log::red_bg << "listen error" << Log::nl;
         throw std::runtime_error(std::strerror(errno));
     }
@@ -113,7 +113,7 @@ void Server::_handle_event(size_t &i)
 
     // 1. Errors first
     if (pfd.revents & (POLLHUP | POLLERR | POLLNVAL)) {
-        if (pfd.fd == _listen_fd) {
+        if (pfd.fd == _fd) {
             std::cerr << Log::red_bg << "server fatal error" << Log::nl;
             throw std::runtime_error("listening socket failed");
         }
@@ -124,7 +124,7 @@ void Server::_handle_event(size_t &i)
 
     // 2. Reads
     if (pfd.revents & POLLIN) {
-        if (pfd.fd == _listen_fd) {
+        if (pfd.fd == _fd) {
             _accept_new();
         } else {
             Connexion *c = _connexions[pfd.fd];
@@ -162,7 +162,7 @@ void Server::_accept_new()
 {
     sockaddr_in addr;
     socklen_t addrlen = sizeof(addr);
-    int client_fd = accept(_listen_fd, (struct sockaddr *)&addr, &addrlen);
+    int client_fd = accept(_fd, (struct sockaddr *)&addr, &addrlen);
     if (client_fd < 0) {
         std::cerr << Log::red_bg << "accept error: " << std::strerror(errno)
                   << Log::nl;

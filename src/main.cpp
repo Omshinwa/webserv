@@ -11,6 +11,5 @@ int main()
         Log::error(e.what());
         return 1;
     }
-    std::cout << Log::white_bg << "PROGRAM END" << Log::nl;
     return 0;
 }

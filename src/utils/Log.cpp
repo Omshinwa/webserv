@@ -42,7 +42,7 @@ const std::string Log::b(int n)
     static const std::string palette[] = { black_bg, red_bg, green_bg,
         yellow_bg, blue_bg, magenta_bg, cyan_bg };
     static const int N = sizeof(palette) / sizeof(palette[0]);
-    return c(n) + palette[n % N];
+    return white + palette[n % N];
 }
 
 // 24bit RGB version (not supported everywhere)
