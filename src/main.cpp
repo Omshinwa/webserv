@@ -5,7 +5,7 @@
 int main()
 {
     try {
-        Server server(8080);
+        Server server;
         server.run();
     } catch (const std::exception &e) {
         Log::error(e.what());

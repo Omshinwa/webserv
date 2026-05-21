@@ -14,42 +14,10 @@
 #include "Log.hpp"
 #include "common.h"
 
-std::ostream &operator<<(std::ostream &os, const sockaddr_in &addr)
-{
-    uint32_t ip = ntohl(addr.sin_addr.s_addr); // host byte order
-    os << "    Address:";
-    os << ((ip >> 24) & 0xFF) << "." << ((ip >> 16) & 0xFF) << "."
-       << ((ip >> 8) & 0xFF) << "." << (ip & 0xFF) << "\n";
-    os << "    Port:   " << ntohs(addr.sin_port) << "\n";
-    return os;
-}
-
-Server::Server(int port)
-    : _fd(-1)
-    , _port(port)
-{
-    setup_listening_socket();
-
-    pollfd listen_pfd;
-    listen_pfd.fd = _fd;
-    listen_pfd.events = POLLIN;
-    listen_pfd.revents = 0;
-    _pollfds.push_back(listen_pfd);
-}
-
-Server::~Server()
-{
-    Log::debug("~Destructor Server fd " + to_string(_fd));
-    for (std::map<int, Connexion *>::iterator it = _connexions.begin();
-        it != _connexions.end(); ++it) {
-        delete it->second; // destructor closes fd
-    }
-    if (_fd >= 0)
-        close(_fd);
-}
-
 // create socket -> setsockopt -> nonblock -> bind -> listen
-void Server::setup_listening_socket()
+Server::Server()
+    : _fd(-1)
+    , _port(8080) // eventually gotta do this through config?
 {
     // create the socket
     {
@@ -89,6 +57,28 @@ void Server::setup_listening_socket()
             throw std::runtime_error(std::strerror(errno));
         }
     }
+
+    append_to_poll(_fd);
+}
+
+void Server::append_to_poll(int fd)
+{
+    pollfd polling_req;
+    polling_req.fd = fd;
+    polling_req.events = POLLIN;
+    polling_req.revents = 0;
+    _pollfds.push_back(polling_req);
+}
+
+Server::~Server()
+{
+    Log::debug("~Destructor Server fd " + to_string(_fd));
+    for (std::map<int, Connexion *>::iterator it = _connexions.begin();
+        it != _connexions.end(); ++it) {
+        delete it->second; // destructor closes fd
+    }
+    if (_fd >= 0)
+        close(_fd);
 }
 
 // poll uses events and revents:
@@ -98,6 +88,8 @@ void Server::run()
 {
     log_event("SERVER RUNNING");
     while (true) {
+        // poll will set all the revents to 0, then
+        // poll will BLOCK the process until an event triggers it
         int n = poll(&_pollfds[0], _pollfds.size(), -1); // -1 = wait forever
         if (n < 0) {
             if (errno == EINTR) // signal interrupted, just retry
@@ -106,10 +98,21 @@ void Server::run()
             throw std::runtime_error(std::strerror(errno));
         }
 
+        // goes through polls, handle events
         for (size_t i = 0; i < _pollfds.size(); i++) {
             if (_pollfds[i].revents == 0)
                 continue;
-            handle_event(i);
+            handle_event(_pollfds[i]);
+        }
+
+        // goes through connexions, clean them if their state is 'CLOSING',
+        for (std::map<int, Connexion *>::iterator it = _connexions.begin();
+            it != _connexions.end();) {
+            Connexion *c = it->second;
+            ++it; // advance before drop_connexion() invalidates the current
+                  // iterator
+            if (c->state() == Connexion::CLOSING)
+                drop_connexion(c);
         }
     }
 }
@@ -134,35 +137,31 @@ void Server::run()
 //
 //
 
-void Server::handle_event(size_t &i)
+void Server::handle_event(pollfd &pfd)
 {
-    pollfd &pfd = _pollfds[i];
-
-    // 1. Errors first
+    // 1. Handle Errors
     if (pfd.revents & (POLLHUP | POLLERR | POLLNVAL)) {
-        if (pfd.fd == _fd) {
-            std::cerr << Log::red_bg << "server fatal error" << Log::nl;
+        if (pfd.fd == _fd) { // the poll is the server
+            log_error("server fatal error");
             throw std::runtime_error("listening socket failed");
         }
-        drop(_connexions[pfd.fd]);
-        i--;
+        _connexions[pfd.fd]->mark_closing();
         return;
     }
 
     // 2. Reads
     if (pfd.revents & POLLIN) {
-        if (pfd.fd == _fd) { // if the poll is the server fd
-            accept_new();
+        if (pfd.fd == _fd) { // the poll is the server
+            accept_new_connexion();
         } else {
             Connexion *c = _connexions[pfd.fd];
             if (c->do_recv() <= 0) {
-                drop(c);
-                i--;
+                c->mark_closing();
                 return;
             }
+            pfd.events = POLLOUT;
             // request received → build response, switch to write
             c->queue_response(build_response());
-            pfd.events = POLLOUT;
         }
     }
 
@@ -170,42 +169,42 @@ void Server::handle_event(size_t &i)
     if (pfd.revents & POLLOUT) {
         Connexion *c = _connexions[pfd.fd];
         if (c->do_send() < 0) {
-            drop(c);
-            i--;
+            c->mark_closing();
             return;
         }
-        if (c->state() == Connexion::CLOSING || !USE_HTTP_1_1) {
-            drop(c);
-            i--;
+        if (c->state() == Connexion::CLOSING) {
+            c->mark_closing();
             return;
         }
         // HTTP/1.1: response sent but keep-alive — flip back to reading
-        if (USE_HTTP_1_1)
-            pfd.events = POLLIN;
+        pfd.events = POLLIN;
     }
 }
 
-void Server::accept_new()
+// Construct a Connexion and register it if no error
+void Server::accept_new_connexion()
 {
-    sockaddr_in addr;
-    socklen_t addrlen = sizeof(addr);
-    int client_fd = accept(_fd, (struct sockaddr *)&addr, &addrlen);
-    if (client_fd < 0) {
-        log_error("accept error: " + to_string(std::strerror(errno)));
+    Connexion *c;
+
+    try {
+        int connexion_fd = accept(_fd, NULL, NULL);
+        if (connexion_fd < 0)
+            throw std::runtime_error(std::strerror(errno));
+        c = new Connexion(connexion_fd);
+        log_event("NEW Client Socket FD: " + to_string(c->fd));
+    } catch (const std::exception &e) {
+        log_error(std::string("accept error: ") + e.what());
         return;
     }
 
-    _connexions[client_fd] = new Connexion(client_fd, addr);
-    log_event("NEW Client Socket FD: " + to_string(client_fd));
-
-    pollfd new_pfd;
-    new_pfd.fd = client_fd;
-    new_pfd.events = POLLIN;
-    new_pfd.revents = 0;
-    _pollfds.push_back(new_pfd);
+    // add it to the Connexions map and the polls vector
+    _connexions[c->fd] = c;
+    append_to_poll(c->fd);
 }
 
-void Server::drop(Connexion *c)
+// Remove the Connexion from the list of connexions, deletes it (close the fd)
+// and remove the associated poll_fd from the vector.
+void Server::drop_connexion(Connexion *c)
 {
     int fd = c->fd;
     _connexions.erase(fd);
@@ -213,11 +212,15 @@ void Server::drop(Connexion *c)
     for (size_t i = 0; i < _pollfds.size(); i++) {
         if (_pollfds[i].fd == fd) {
             _pollfds.erase(_pollfds.begin() + i);
+            log_event("CLOSED Client Socket FD: " + to_string(c->fd));
             break;
         }
     }
 }
 
+// todo lol
+// probably deserves its own Response() class
+//
 std::string Server::build_response()
 {
     const std::string filepath = "./www/index.html";
@@ -251,14 +254,14 @@ std::string Server::build_response()
     return resp.str();
 }
 
-//  █████          ███████      █████████   █████████
-// ▒▒███         ███▒▒▒▒▒███   ███▒▒▒▒▒███ ███▒▒▒▒▒███
-//  ▒███        ███     ▒▒███ ███     ▒▒▒ ▒███    ▒▒▒
-//  ▒███       ▒███      ▒███▒███         ▒▒█████████
-//  ▒███       ▒███      ▒███▒███    █████ ▒▒▒▒▒▒▒▒███
-//  ▒███      █▒▒███     ███ ▒▒███  ▒▒███  ███    ▒███
-//  ███████████ ▒▒▒███████▒   ▒▒█████████ ▒▒█████████
-// ▒▒▒▒▒▒▒▒▒▒▒    ▒▒▒▒▒▒▒      ▒▒▒▒▒▒▒▒▒   ▒▒▒▒▒▒▒▒▒
+//  ██████████   ██████████ ███████████  █████  █████   █████████
+// ▒▒███▒▒▒▒███ ▒▒███▒▒▒▒▒█▒▒███▒▒▒▒▒███▒▒███  ▒▒███   ███▒▒▒▒▒███
+//  ▒███   ▒▒███ ▒███  █ ▒  ▒███    ▒███ ▒███   ▒███  ███     ▒▒▒
+//  ▒███    ▒███ ▒██████    ▒██████████  ▒███   ▒███ ▒███
+//  ▒███    ▒███ ▒███▒▒█    ▒███▒▒▒▒▒███ ▒███   ▒███ ▒███    █████
+//  ▒███    ███  ▒███ ▒   █ ▒███    ▒███ ▒███   ▒███ ▒▒███  ▒▒███
+//  ██████████   ██████████ ███████████  ▒▒████████   ▒▒█████████
+// ▒▒▒▒▒▒▒▒▒▒   ▒▒▒▒▒▒▒▒▒▒ ▒▒▒▒▒▒▒▒▒▒▒    ▒▒▒▒▒▒▒▒     ▒▒▒▒▒▒▒▒▒
 //
 //
 
@@ -275,3 +278,13 @@ void Server::log_event(std::string s)
 void Server::log_error(std::string s) { Log::error(s); }
 
 void Server::log_debug(std::string s) { Log::debug(s); }
+
+std::ostream &operator<<(std::ostream &os, const sockaddr_in &addr)
+{
+    uint32_t ip = ntohl(addr.sin_addr.s_addr); // host byte order
+    os << "    Address:";
+    os << ((ip >> 24) & 0xFF) << "." << ((ip >> 16) & 0xFF) << "."
+       << ((ip >> 8) & 0xFF) << "." << (ip & 0xFF) << "\n";
+    os << "    Port:   " << ntohs(addr.sin_port) << "\n";
+    return os;
+}

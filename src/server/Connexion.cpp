@@ -2,18 +2,19 @@
 
 #include <sys/socket.h>
 
+#include <cerrno>
+#include <cstring>
 #include <iostream>
+#include <stdexcept>
 
-#include "common.h" // for operator<<(ostream, sockaddr_in)
+#include "common.h"
 
-Connexion::Connexion(int fd, const sockaddr_in &addr)
+Connexion::Connexion(int fd)
     : fd(fd)
-    , addr(addr)
     , _state(READING)
     , _send_offset(0)
 {
     fcntl(fd, F_SETFL, O_NONBLOCK);
-    std::cout << addr;
 }
 
 Connexion::~Connexion()
@@ -25,6 +26,8 @@ Connexion::~Connexion()
 
 Connexion::State Connexion::state() const { return _state; }
 
+void Connexion::mark_closing() { _state = CLOSING; }
+
 ssize_t Connexion::do_recv()
 {
     char buf[4096];
@@ -32,7 +35,7 @@ ssize_t Connexion::do_recv()
     if (n > 0) {
         _recv_buf.append(buf, n);
         buf[n] = '\0';
-        log_info("  !  file descriptor " + to_string(fd) + " sent: \n" + buf);
+        log_info("<    file descriptor " + to_string(fd) + " sent: \n" + buf);
     } else if (n == 0) {
         _state = CLOSING; // peer closed cleanly
     }
@@ -50,8 +53,11 @@ ssize_t Connexion::do_send()
     ssize_t n = send(fd, data, left, 0);
     if (n > 0) {
         _send_offset += n;
-        if (_send_offset >= _send_buf.size())
-            _state = CLOSING; // HTTP/1.0-style: close after response
+
+        log_info(
+            ">    sent to file descriptor " + to_string(fd) + ": \n" + data);
+        // if (_send_offset >= _send_buf.size())
+        //     _state = CLOSING; // HTTP/1.0-style: close after response
     }
     return n;
 }

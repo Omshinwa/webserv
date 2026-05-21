@@ -15,12 +15,12 @@ public:
     };
 
     const int fd;
-    const sockaddr_in addr;
 
-    Connexion(int fd, const sockaddr_in &addr);
+    explicit Connexion(int listen_fd); // does accept(); throws on failure
     ~Connexion();
 
     State state() const;
+    void mark_closing();
 
     // Pull bytes from the socket into _recv_buf.
     // Returns bytes read, 0 on peer close, -1 on error.
@@ -39,6 +39,8 @@ private:
     std::string _recv_buf;
     std::string _send_buf;
     size_t _send_offset;
+
+    static int do_accept(int listen_fd, sockaddr_in &out); // throws on -1
 
     // LOG
 

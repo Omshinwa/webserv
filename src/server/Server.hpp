@@ -12,7 +12,7 @@ class Connexion;
 
 class Server {
 public:
-    explicit Server(int port);
+    explicit Server();
     ~Server();
 
     void run(); // main poll loop, blocks forever
@@ -20,13 +20,13 @@ public:
 private:
     int _fd;
     int _port;
-    std::vector<pollfd> _pollfds;
-    std::map<int, Connexion *> _connexions;
+    std::vector<pollfd> _pollfds; // list of all the poll requests
+    std::map<int, Connexion *> _connexions; // int fd -> Connexion*
 
-    void setup_listening_socket();
-    void accept_new();
-    void drop(Connexion *c); // close client, remove from _connexions and _pollfds
-    void handle_event(size_t &i); // dispatches POLLIN/POLLOUT for one fd
+    void append_to_poll(int fd);
+    void accept_new_connexion();
+    void drop_connexion(Connexion *c);
+    void handle_event(pollfd &pfd);
 
     static std::string build_response();
 

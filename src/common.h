@@ -1,5 +1,6 @@
 #ifndef COMMON_H
 #define COMMON_H
+
 // POSIX libraries
 #include <fcntl.h>
 #include <netdb.h>
@@ -17,8 +18,6 @@
 
 #include "Log.hpp"
 #include "conversion.hpp"
-
-#define USE_HTTP_1_1 1
 
 std::ostream &operator<<(std::ostream &os, const sockaddr_in &addr);
 

@@ -1,2 +1,4 @@
-* check why it closes even on 1.1
-* review Connexion and Server
+i dont like this line
+* c->queue_response(build_response());
+
+refactor it, idea: have a Response() class that takes its text to parse as input?
