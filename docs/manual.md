@@ -73,6 +73,9 @@ A full-bidirectionnal channel between server and client. You can recv and send o
 
 # **POLL**
 
+Poll is what allows you to have a lots of fds, you put them in a poll, only when one has a change
+does poll() reacts and allows you to keep going.
+
 select, poll, epoll, allows to create a poll of sockets where you handle the ones that are ready.
 
 poll.revents is a bitmask, the main values to care about:
