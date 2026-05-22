@@ -1,7 +1,5 @@
 # Log levels
 
-
-
 # **What you'll actually learn, ranked by how much of the project it is**
 
 1. **Event-driven network programming.** Sockets, poll(), state machines per connection, buffering reads until you have a complete request, buffering writes until the kernel accepts them. This is ~60% of the difficulty.
@@ -78,7 +76,6 @@ and closedir.
 # Q: telnet isnt installed?
 
 https://en.wikipedia.org/wiki/List_of_HTTP_status_codes
-
 
 
 nc localhost 8080
@@ -169,11 +166,16 @@ For routes mapped to a CGI extension (e.g. `.php`, `.py`):
 - Idle-connection timeouts (kick slow clients).
 - Stress test with `siege`, `ab`, or a custom Python script — must not crash, must not leak fds.
 
-## Key principle
-Do NOT start HTTP parsing on a blocking server. Get the I/O model (step 2) right on a dumb echo server first. Otherwise you'll rewrite all the protocol code when you switch to poll.
+
+# Request PARSE, Response BUILD
+1. The server reads raw text from the socket.
+2. A Request object takes that raw text and parses it into structured data (Method, URI, Headers, Body).
+3. The Response class takes the fully parsed Request object (and optionally your server/route Config) in its constructor.
+4. The Response class uses that information to check if the route is valid, verify allowed methods, read the requested file (or run CGI), and formulate the final HTTP response string.
 
 
-ressources
+
+# ressources
 
 https://www.ibm.com/docs/en/i/7.2.0?topic=designs-example-nonblocking-io-select
 
@@ -194,7 +196,6 @@ Connection — per-client state: fd, recv/send buffers, parsing state machine
 Request / Response — parsed data + response builder
 Config / Location — parsed config and route matching
 CGI — child process + pipe management
-
 
 
 

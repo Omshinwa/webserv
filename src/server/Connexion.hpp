@@ -51,7 +51,7 @@ private:
 
     // INNACCESSIBLE
     // we dont allow several Connexion for one fd
-
+    Connexion();
     Connexion(const Connexion &);
     Connexion &operator=(const Connexion &);
 };

@@ -47,15 +47,15 @@ ssize_t Connexion::do_send()
     if (_send_offset >= _send_buf.size())
         return 0;
 
-    const char *data = _send_buf.data() + _send_offset;
+    const char *buf = _send_buf.data() + _send_offset;
     size_t left = _send_buf.size() - _send_offset;
 
-    ssize_t n = send(fd, data, left, 0);
+    ssize_t n = send(fd, buf, left, 0);
     if (n > 0) {
         _send_offset += n;
 
         log_info(
-            ">    sent to file descriptor " + to_string(fd) + ": \n" + data);
+            ">    sent to file descriptor " + to_string(fd) + ": \n" + buf);
         // if (_send_offset >= _send_buf.size())
         //     _state = CLOSING; // HTTP/1.0-style: close after response
     }

@@ -6,12 +6,13 @@
 
 #include <cerrno>
 #include <cstring>
-#include <fstream>
 #include <sstream>
 #include <stdexcept>
 
 #include "Connexion.hpp"
 #include "Log.hpp"
+#include "Request.hpp"
+#include "Response.hpp"
 #include "common.h"
 
 // create socket -> setsockopt -> nonblock -> bind -> listen
@@ -159,9 +160,9 @@ void Server::handle_event(pollfd &pfd)
                 c->mark_closing();
                 return;
             }
+            fill_connexion_buffer(c);
             pfd.events = POLLOUT;
             // request received → build response, switch to write
-            c->queue_response(build_response());
         }
     }
 
@@ -218,40 +219,12 @@ void Server::drop_connexion(Connexion *c)
     }
 }
 
-// todo lol
-// probably deserves its own Response() class
-//
-std::string Server::build_response()
+void Server::fill_connexion_buffer(Connexion &c)
 {
-    const std::string filepath = "./www/index.html";
-    std::ifstream file(filepath.c_str(), std::ios::binary);
-    if (!file.is_open()) {
-        std::string body = "<h1>500</h1><p>Failed to open local file.</p>\n";
-        std::ostringstream resp;
-        resp << "HTTP/1.1 500 Internal Server Error\r\n"
-             << "Content-Type: text/html\r\n"
-             << "Content-Length: " << body.size() << "\r\n"
-             << "Connection: close\r\n"
-             << "\r\n"
-             << body;
-        Log::error("failed to open local file:");
-        Log::error(std::strerror(errno));
-        return resp.str();
-    }
+    Request req(c._recv_buf);
+    Response res(req);
 
-    std::ostringstream body_stream;
-    body_stream << file.rdbuf();
-    std::string body = body_stream.str();
-
-    std::ostringstream resp;
-    resp << "HTTP/1.1 200 OK\r\n"
-         << "Content-Type: text/html\r\n"
-         << "Content-Length: " << body.size() << "\r\n"
-         << "Connection: close\r\n"
-         << "\r\n"
-         << body;
-    std::cout << "Successfully built response from `" << filepath << "`\n";
-    return resp.str();
+    c->queue_response(res.to_str());
 }
 
 //  ██████████   ██████████ ███████████  █████  █████   █████████
