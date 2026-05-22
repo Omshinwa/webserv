@@ -11,8 +11,8 @@
 
 #include "Connexion.hpp"
 #include "Log.hpp"
-#include "Request.hpp"
-#include "Response.hpp"
+#include "RequestParser.hpp"
+#include "ResponseBuilder.hpp"
 #include "common.h"
 
 // create socket -> setsockopt -> nonblock -> bind -> listen
@@ -221,8 +221,8 @@ void Server::drop_connexion(Connexion *c)
 
 void Server::fill_connexion_buffer(Connexion &c)
 {
-    Request req(c._recv_buf);
-    Response res(req);
+    RequestParser req(c._recv_buf);
+    ResponseBuilder res(req);
 
     c->queue_response(res.to_str());
 }

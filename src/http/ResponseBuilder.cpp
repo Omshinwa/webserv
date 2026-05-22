@@ -1,15 +1,15 @@
-#include "Response.hpp"
+#include "ResponseBuilder.hpp"
 
 #include <fstream>
 
 #include "common.h"
 
-Response::Response(Request req)
+ResponseBuilder::ResponseBuilder(RequestParser req)
 {
     // receive the request, build the response
 }
 
-std::string Response::to_str()
+std::string ResponseBuilder::to_str()
 {
     const std::string filepath = "./www/index.html";
     std::ifstream file(filepath.c_str(), std::ios::binary);
