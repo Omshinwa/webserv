@@ -4,12 +4,7 @@
 
 #include "common.h"
 
-ResponseBuilder::ResponseBuilder(RequestParser req)
-{
-    // receive the request, build the response
-}
-
-std::string ResponseBuilder::to_str()
+std::string ResponseBuilder::build(RequestParser &)
 {
     const std::string filepath = "./www/index.html";
     std::ifstream file(filepath.c_str(), std::ios::binary);
@@ -38,6 +33,6 @@ std::string ResponseBuilder::to_str()
          << "Connection: close\r\n"
          << "\r\n"
          << body;
-    std::cout << "Successfully built response from `" << filepath << "`\n";
+    Log::event("Successfully built response from `" + filepath + "`");
     return resp.str();
 }

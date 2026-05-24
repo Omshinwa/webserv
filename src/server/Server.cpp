@@ -73,7 +73,7 @@ void Server::append_to_poll(int fd)
 
 Server::~Server()
 {
-    Log::debug("~Destructor Server fd " + to_string(_fd));
+    Log::debug("~Destructor Server fd " + util::to_string(_fd));
     for (std::map<int, Connexion *>::iterator it = _connexions.begin();
         it != _connexions.end(); ++it) {
         delete it->second; // destructor closes fd
@@ -156,11 +156,9 @@ void Server::handle_event(pollfd &pfd)
             accept_new_connexion();
         } else {
             Connexion *c = _connexions[pfd.fd];
-            if (c->do_recv() <= 0) {
-                c->mark_closing();
+            c->do_recv();
+            if (c->state() == Connexion::CLOSING)
                 return;
-            }
-            fill_connexion_buffer(c);
             pfd.events = POLLOUT;
             // request received → build response, switch to write
         }
@@ -192,7 +190,7 @@ void Server::accept_new_connexion()
         if (connexion_fd < 0)
             throw std::runtime_error(std::strerror(errno));
         c = new Connexion(connexion_fd);
-        log_event("NEW Client Socket FD: " + to_string(c->fd));
+        log_event("NEW Client Socket FD: " + util::to_string(c->fd));
     } catch (const std::exception &e) {
         log_error(std::string("accept error: ") + e.what());
         return;
@@ -213,18 +211,10 @@ void Server::drop_connexion(Connexion *c)
     for (size_t i = 0; i < _pollfds.size(); i++) {
         if (_pollfds[i].fd == fd) {
             _pollfds.erase(_pollfds.begin() + i);
-            log_event("CLOSED Client Socket FD: " + to_string(c->fd));
+            log_event("CLOSED Client Socket FD: " + util::to_string(c->fd));
             break;
         }
     }
-}
-
-void Server::fill_connexion_buffer(Connexion &c)
-{
-    RequestParser req(c._recv_buf);
-    ResponseBuilder res(req);
-
-    c->queue_response(res.to_str());
 }
 
 //  ██████████   ██████████ ███████████  █████  █████   █████████

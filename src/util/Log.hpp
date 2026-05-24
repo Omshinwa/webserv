@@ -5,6 +5,8 @@
 
 class Log {
 public:
+    static int color_idx;
+
     static const std::string red;
     static const std::string green;
     static const std::string yellow;
@@ -37,6 +39,8 @@ public:
     static std::string rgb_to_ansi(int r, int g, int b);
 
     static void debug(const std::string s);
+    static void info(const std::string s);
+    static void event(const std::string s);
     static void error(const std::string s);
 
 private:

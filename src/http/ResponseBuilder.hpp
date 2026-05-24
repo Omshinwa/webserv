@@ -6,10 +6,10 @@
 class ResponseBuilder {
 
 public:
-    ResponseBuilder(RequestParser);
-    ~ResponseBuilder();
+    // ResponseBuilder(RequestParser &);
+    // ~ResponseBuilder();
 
-    std::string ResponseBuilder::to_str();
+    static std::string build(RequestParser &);
 
 private:
     // INACCESSIBLE

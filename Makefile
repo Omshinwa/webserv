@@ -2,9 +2,11 @@ NAME = webserv
 
 # a changer avant la correction
 SRC =	src/main.cpp \
-		src/utils/Log.cpp \
+		src/util/Log.cpp \
 		src/server/Connexion.cpp \
-		src/server/Server.cpp
+		src/server/Server.cpp \
+		src/http/RequestParser.cpp \
+		src/http/ResponseBuilder.cpp 
 
 OBJ = $(SRC:.cpp=.o)
 
@@ -15,7 +17,7 @@ SOURCE_FILES = $(addprefix $(SRC_DIR)/, $(SRC))
 OBJECT_FILES = $(addprefix $(OBJ_DIR)/, $(OBJ))
 DEPENDANCIES = $(OBJECT_FILES:.o=.d)
 
-INCLUDES = -I src -I src/utils -I src/server
+INCLUDES = -I src -I src/util -I src/server -I src/http
 
 CXX = c++ -Wall -Wextra -Werror -std=c++98 -g3 -MMD -MP $(INCLUDES)
 
