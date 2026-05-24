@@ -8,7 +8,7 @@ typedef std::map<std::string, std::string> t_dict;
 class RequestParser {
 
 public:
-    enum State { INCOMPLETE, COMPLETE, ERROR };
+    enum State { INCOMPLETE_HEADER, INCOMPLETE_BODY, COMPLETE, ERROR };
 
     RequestParser(std::string &);
     ~RequestParser();
@@ -19,22 +19,25 @@ public:
     inline State state() const { return _state; };
 
 private:
-    // static const size_t MAX_LINE = 8192;
+    enum IncompleteState { HEADER, BODY };
+
     static const size_t MAX_HEADER_SIZE = 32000;
 
     State _state;
+
     int _status_code;
 
     //
     std::string method;
     std::string URI;
     std::string protocol;
+    std::string body;
 
     // A bunch of internal variables used to represent a request
     std::string &buffer;
     size_t scan_pos; // we scan the buffer until we find \r\n\r\n
 
-    void parse_header();
+    void parse_header(std::string header_data);
     void parse_start_line(std::string line);
     void parse_header_line(std::string line);
 

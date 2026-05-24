@@ -52,7 +52,9 @@ void Connexion::do_recv()
 
     Log::info("parse state: " + util::to_string(request.state()));
     switch (request.state()) {
-    case RequestParser::INCOMPLETE:
+    case RequestParser::INCOMPLETE_HEADER:
+        break;
+    case RequestParser::INCOMPLETE_BODY:
         break;
     case RequestParser::COMPLETE:
         _state = CLOSING;

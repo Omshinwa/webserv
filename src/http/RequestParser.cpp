@@ -6,7 +6,7 @@
 // The parser shares the buffer with Connexion
 
 RequestParser::RequestParser(std::string &buffer)
-    : _state(INCOMPLETE)
+    : _state(INCOMPLETE_HEADER)
     , _status_code(0)
     , buffer(buffer)
     , scan_pos(0)
@@ -62,11 +62,11 @@ void RequestParser::parse_header_line(std::string line)
 }
 
 // Only call it when we have the full header in buffer
-void RequestParser::parse_header()
+void RequestParser::parse_header(std::string header_data)
 {
 
     std::vector<std::string> lines;
-    lines = util::split(buffer, "\r\n");
+    lines = util::split(header_data, "\r\n");
 
     for (std::vector<std::string>::iterator it = lines.begin();
         it != lines.end(); it++) {
@@ -86,32 +86,52 @@ void RequestParser::parse_header()
         return;
     }
 
+    // if theres no content-length key, we have the full request
+    if (header.find("content-length") == header.end()) {
+        Log::info("No content length!");
+        _state = COMPLETE;
+    } else {
+        Log::info("Content length: " + header["content-length"]);
+        _state = INCOMPLETE_BODY;
+    }
+
     Log::event("HEADER OK");
 }
 
 void RequestParser::parse()
 {
-    const std::string header_delim = "\r\n\r\n";
+    if (_state == INCOMPLETE_HEADER) {
+        const std::string header_delim = "\r\n\r\n";
 
-    // we dont use split(), i'm remembering scan_pos for the last time
-    // we checked, slight optimization
-    size_t header_end = buffer.find(header_delim, scan_pos);
-    if (header_end == std::string::npos) {
-        if (buffer.length() > header_delim.length()) {
-            scan_pos = buffer.length() - header_delim.length();
-            if (buffer.size() > MAX_HEADER_SIZE)
-                _state = ERROR;
+        // we dont use split(), i'm remembering scan_pos for the last time
+        // we checked, slight optimization
+        size_t header_end = buffer.find(header_delim, scan_pos);
+        if (header_end == std::string::npos) {
+            // if we read more than 4 bytes....
+            if (buffer.length() > header_delim.length()) {
+                // scan_pos = length we read (minus 4, in case \r\n\r\n was
+                // given cut)
+                scan_pos = buffer.length() - header_delim.length();
+                if (buffer.size() > MAX_HEADER_SIZE)
+                    _state = ERROR;
+            }
+            return;
         }
-        return;
-    }
-    buffer.resize(header_end);
-    parse_header();
-    if (_state == ERROR) {
-        _status_code = 400;
-        return;
-    }
 
-    _state = COMPLETE;
+        parse_header(buffer.substr(0, header_end));
+        buffer = buffer.substr(header_end + header_delim.length());
+        if (_state == ERROR) {
+            _status_code = 400;
+            return;
+        }
+    }
+    if (_state == INCOMPLETE_BODY) {
+        if (static_cast<int>(buffer.size())
+            < std::atoi(header["content-length"].c_str()))
+            return;
+        body = buffer;
+        _state = COMPLETE;
+    }
 
     // TODO: read X bytes from the body
 }
