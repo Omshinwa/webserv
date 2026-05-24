@@ -3,6 +3,7 @@
 #include <iostream>
 #include <sstream>
 
+int Log::color_idx = 0;
 const std::string Log::red = "\033[31m";
 const std::string Log::green = "\033[32m";
 const std::string Log::yellow = "\033[33m";
@@ -73,3 +74,7 @@ void Log::debug(const std::string s)
 }
 
 void Log::error(const std::string s) { std::cerr << red << s << nl; }
+
+void Log::info(const std::string s) { std::cout << c(color_idx) << s << "\n"; }
+
+void Log::event(const std::string s) { std::cout << b(color_idx) << s << nl; }

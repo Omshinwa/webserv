@@ -6,12 +6,13 @@
 
 #include <cerrno>
 #include <cstring>
-#include <fstream>
 #include <sstream>
 #include <stdexcept>
 
 #include "Connexion.hpp"
 #include "Log.hpp"
+#include "RequestParser.hpp"
+#include "ResponseBuilder.hpp"
 #include "common.h"
 
 // create socket -> setsockopt -> nonblock -> bind -> listen
@@ -72,7 +73,7 @@ void Server::append_to_poll(int fd)
 
 Server::~Server()
 {
-    Log::debug("~Destructor Server fd " + to_string(_fd));
+    Log::debug("~Destructor Server fd " + util::to_string(_fd));
     for (std::map<int, Connexion *>::iterator it = _connexions.begin();
         it != _connexions.end(); ++it) {
         delete it->second; // destructor closes fd
@@ -155,13 +156,11 @@ void Server::handle_event(pollfd &pfd)
             accept_new_connexion();
         } else {
             Connexion *c = _connexions[pfd.fd];
-            if (c->do_recv() <= 0) {
-                c->mark_closing();
+            c->do_recv();
+            if (c->state() == Connexion::CLOSING)
                 return;
-            }
             pfd.events = POLLOUT;
             // request received → build response, switch to write
-            c->queue_response(build_response());
         }
     }
 
@@ -191,7 +190,7 @@ void Server::accept_new_connexion()
         if (connexion_fd < 0)
             throw std::runtime_error(std::strerror(errno));
         c = new Connexion(connexion_fd);
-        log_event("NEW Client Socket FD: " + to_string(c->fd));
+        log_event("NEW Client Socket FD: " + util::to_string(c->fd));
     } catch (const std::exception &e) {
         log_error(std::string("accept error: ") + e.what());
         return;
@@ -212,46 +211,10 @@ void Server::drop_connexion(Connexion *c)
     for (size_t i = 0; i < _pollfds.size(); i++) {
         if (_pollfds[i].fd == fd) {
             _pollfds.erase(_pollfds.begin() + i);
-            log_event("CLOSED Client Socket FD: " + to_string(c->fd));
+            log_event("CLOSED Client Socket FD: " + util::to_string(c->fd));
             break;
         }
     }
-}
-
-// todo lol
-// probably deserves its own Response() class
-//
-std::string Server::build_response()
-{
-    const std::string filepath = "./www/index.html";
-    std::ifstream file(filepath.c_str(), std::ios::binary);
-    if (!file.is_open()) {
-        std::string body = "<h1>500</h1><p>Failed to open local file.</p>\n";
-        std::ostringstream resp;
-        resp << "HTTP/1.1 500 Internal Server Error\r\n"
-             << "Content-Type: text/html\r\n"
-             << "Content-Length: " << body.size() << "\r\n"
-             << "Connection: close\r\n"
-             << "\r\n"
-             << body;
-        Log::error("failed to open local file:");
-        Log::error(std::strerror(errno));
-        return resp.str();
-    }
-
-    std::ostringstream body_stream;
-    body_stream << file.rdbuf();
-    std::string body = body_stream.str();
-
-    std::ostringstream resp;
-    resp << "HTTP/1.1 200 OK\r\n"
-         << "Content-Type: text/html\r\n"
-         << "Content-Length: " << body.size() << "\r\n"
-         << "Connection: close\r\n"
-         << "\r\n"
-         << body;
-    std::cout << "Successfully built response from `" << filepath << "`\n";
-    return resp.str();
 }
 
 //  ██████████   ██████████ ███████████  █████  █████   █████████

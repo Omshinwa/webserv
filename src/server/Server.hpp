@@ -28,8 +28,6 @@ private:
     void drop_connexion(Connexion *c);
     void handle_event(pollfd &pfd);
 
-    static std::string build_response();
-
     // LOG
 
     void log_debug(std::string s);

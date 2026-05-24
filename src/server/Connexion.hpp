@@ -6,6 +6,9 @@
 
 #include <string>
 
+#include "RequestParser.hpp"
+#include "ResponseBuilder.hpp"
+
 class Connexion {
 public:
     enum State {
@@ -24,7 +27,7 @@ public:
 
     // Pull bytes from the socket into _recv_buf.
     // Returns bytes read, 0 on peer close, -1 on error.
-    ssize_t do_recv();
+    void do_recv();
 
     // Push bytes from _send_buf to the socket, advancing _send_offset.
     // Returns bytes sent, -1 on error. Flips state to CLOSING when buffer
@@ -32,7 +35,7 @@ public:
     ssize_t do_send();
 
     // Once you've parsed a complete request, build the response and call this.
-    void queue_response(const std::string &resp);
+    void queue_response();
 
 private:
     State _state;
@@ -40,7 +43,7 @@ private:
     std::string _send_buf;
     size_t _send_offset;
 
-    static int do_accept(int listen_fd, sockaddr_in &out); // throws on -1
+    RequestParser request;
 
     // LOG
 
@@ -51,7 +54,7 @@ private:
 
     // INNACCESSIBLE
     // we dont allow several Connexion for one fd
-
+    Connexion();
     Connexion(const Connexion &);
     Connexion &operator=(const Connexion &);
 };
