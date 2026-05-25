@@ -50,7 +50,7 @@ void Connexion::do_recv()
         _state = CLOSING; // some error
     }
 
-    Log::info("parse state: " + util::to_string(request.state()));
+    // Log::info("parse state: " + util::to_string(request.state()));
     switch (request.state()) {
     case RequestParser::INCOMPLETE_HEADER:
         break;

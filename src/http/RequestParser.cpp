@@ -32,10 +32,10 @@ void RequestParser::parse_start_line(std::string line)
     method = items[0];
     URI = items[1];
     protocol = items[2];
-    Log::event("PARSE OBJECT:");
-    Log::info("method: " + method);
-    Log::info("URI: " + URI);
-    Log::info("protocol: " + protocol);
+    // Log::event("PARSE OBJECT:");
+    // Log::info("method: " + method);
+    // Log::info("URI: " + URI);
+    // Log::info("protocol: " + protocol);
 }
 
 void RequestParser::parse_header_line(std::string line)
@@ -58,7 +58,25 @@ void RequestParser::parse_header_line(std::string line)
     key = util::to_lower(key);
     value = util::trim_spaces(value);
     header[key] = value;
-    Log::info(key + " : " + value);
+    // Log::info(key + " : " + value);
+}
+
+// Just checking that its a valid positive number
+void RequestParser::parse_content_range()
+{
+    char *end;
+    long cl = std::strtol(header["content-length"].c_str(), &end, 10);
+
+    errno = 0;
+    if (end == header["content-length"].c_str()
+        // no digits at all ("", "abc")
+        || *end != '\0' // trailing garbage ("123abc", "12 34")
+        || errno == ERANGE // overflow (number too big for long)
+        || cl < 0) { // negative ("-5")
+        _state = ERROR;
+        return;
+    }
+    content_length = static_cast<size_t>(cl);
 }
 
 // Only call it when we have the full header in buffer
@@ -93,6 +111,7 @@ void RequestParser::parse_header(std::string header_data)
     } else {
         Log::info("Content length: " + header["content-length"]);
         _state = INCOMPLETE_BODY;
+        parse_content_range();
     }
 
     Log::event("HEADER OK");
@@ -126,12 +145,10 @@ void RequestParser::parse()
         }
     }
     if (_state == INCOMPLETE_BODY) {
-        if (static_cast<int>(buffer.size())
-            < std::atoi(header["content-length"].c_str()))
+        if (buffer.size() < content_length)
             return;
-        body = buffer;
+
+        body = buffer.substr(0, content_length);
         _state = COMPLETE;
     }
-
-    // TODO: read X bytes from the body
 }

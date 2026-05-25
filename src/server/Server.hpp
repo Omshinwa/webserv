@@ -12,7 +12,7 @@ class Connexion;
 
 class Server {
 public:
-    explicit Server();
+    Server();
     ~Server();
 
     void run(); // main poll loop, blocks forever
