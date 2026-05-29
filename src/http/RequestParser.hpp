@@ -1,16 +1,15 @@
 #ifndef REQUESTPARSER_H
 #define REQUESTPARSER_H
 
-#include "common.h"
+#include "../common.h"
 
 typedef std::map<std::string, std::string> t_dict;
 
 class RequestParser {
-
-public:
+  public:
     enum State { INCOMPLETE, COMPLETE, ERROR };
 
-    RequestParser(std::string &);
+    RequestParser(std::string&);
     ~RequestParser();
 
     t_dict header;
@@ -18,7 +17,7 @@ public:
     void parse();
     inline State state() const { return _state; };
 
-private:
+  private:
     // static const size_t MAX_LINE = 8192;
     static const size_t MAX_HEADER_SIZE = 32000;
 
@@ -31,8 +30,8 @@ private:
     std::string protocol;
 
     // A bunch of internal variables used to represent a request
-    std::string &buffer;
-    size_t scan_pos; // we scan the buffer until we find \r\n\r\n
+    std::string& buffer;
+    size_t scan_pos;  // we scan the buffer until we find \r\n\r\n
 
     void parse_header();
     void parse_start_line(std::string line);
@@ -43,8 +42,8 @@ private:
 
     // INACCESSIBLE
     RequestParser();
-    RequestParser(const RequestParser &);
-    RequestParser &operator=(const RequestParser &);
+    RequestParser(const RequestParser&);
+    RequestParser& operator=(const RequestParser&);
 };
 
 #endif

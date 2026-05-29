@@ -4,7 +4,7 @@
 #include <string>
 
 class Log {
-public:
+  public:
     static int color_idx;
 
     static const std::string red;
@@ -43,8 +43,8 @@ public:
     static void event(const std::string s);
     static void error(const std::string s);
 
-private:
-    Log(); // not instantiable
+  private:
+    Log();  // not instantiable
 };
 
 #endif

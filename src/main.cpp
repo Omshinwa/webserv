@@ -1,15 +1,13 @@
-#include "Log.hpp"
-#include "Server.hpp"
-#include "common.h"
+#include "server/Server.hpp"
+#include "util/Log.hpp"
 
-int main()
-{
-    try {
-        Server server;
-        server.run();
-    } catch (const std::exception &e) {
-        Log::error(e.what());
-        return 1;
-    }
-    return 0;
+int main() {
+  try {
+    Server server;
+    server.run();
+  } catch (const std::exception& e) {
+    Log::error(e.what());
+    return 1;
+  }
+  return 0;
 }

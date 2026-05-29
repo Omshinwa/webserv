@@ -4,7 +4,7 @@
 // POSIX libraries
 #include <fcntl.h>
 #include <netdb.h>
-#include <netinet/in.h> // AF_INET, sockaddr_in (and for bind() next)
+#include <netinet/in.h>  // AF_INET, sockaddr_in (and for bind() next)
 #include <poll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -17,9 +17,9 @@
 #include <stdexcept>
 #include <vector>
 
-#include "Log.hpp"
-#include "util.hpp"
+#include "./util/Log.hpp"
+#include "./util/util.hpp"
 
-std::ostream &operator<<(std::ostream &os, const sockaddr_in &addr);
+std::ostream& operator<<(std::ostream& os, const sockaddr_in& addr);
 
 #endif

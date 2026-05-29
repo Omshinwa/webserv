@@ -11,22 +11,22 @@
 class Connexion;
 
 class Server {
-public:
-    explicit Server();
+  public:
+    Server();
     ~Server();
 
-    void run(); // main poll loop, blocks forever
+    void run();  // main poll loop, blocks forever
 
-private:
+  private:
     int _fd;
     int _port;
-    std::vector<pollfd> _pollfds; // list of all the poll requests
-    std::map<int, Connexion *> _connexions; // int fd -> Connexion*
+    std::vector<pollfd> _pollfds;           // list of all the poll requests
+    std::map<int, Connexion*> _connexions;  // int fd -> Connexion*
 
     void append_to_poll(int fd);
     void accept_new_connexion();
-    void drop_connexion(Connexion *c);
-    void handle_event(pollfd &pfd);
+    void drop_connexion(Connexion* c);
+    void handle_event(pollfd& pfd);
 
     // LOG
 
@@ -37,8 +37,8 @@ private:
 
     // INNACCESSIBLE
 
-    Server(const Server &);
-    Server &operator=(const Server &);
+    Server(const Server&);
+    Server& operator=(const Server&);
 };
 
 #endif

@@ -1,14 +1,181 @@
-BasedOnStyle: WebKit
-PointerAlignment: Right
+# ============================================================================
+# .clang-format — Google C++ Style Guide (4 espaces)
+# ============================================================================
+# Compatible : clang-format >= 18
+# Référence  : https://google.github.io/styleguide/cppguide.html
+# Doc options: https://clang.llvm.org/docs/ClangFormatStyleOptions.html
+# Variante  : indentation à 4 espaces au lieu de 2 (préférence personnelle)
+# ============================================================================
+
+BasedOnStyle: Google
+Language: Cpp
+Standard: c++17
+
+# ---------------------------------------------------------------------------
+# Indentation et largeur — VARIANTE 4 ESPACES
+# ---------------------------------------------------------------------------
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ColumnLimit: 90
+ContinuationIndentWidth: 8
+ConstructorInitializerIndentWidth: 8
+AccessModifierOffset: -2
 NamespaceIndentation: None
-ColumnLimit: 80
+IndentCaseLabels: true
+IndentPPDirectives: None
+IndentWrappedFunctionNames: false
+
+# ---------------------------------------------------------------------------
+# Accolades — style Attach (K&R)
+# ---------------------------------------------------------------------------
+BreakBeforeBraces: Attach
+Cpp11BracedListStyle: true
+
+# ---------------------------------------------------------------------------
+# Pointeurs et références — collés au type (style Google)
+# ---------------------------------------------------------------------------
+PointerAlignment: Left
+ReferenceAlignment: Left
+DerivePointerAlignment: false
+QualifierAlignment: Leave
+
+# ---------------------------------------------------------------------------
+# Espaces
+# ---------------------------------------------------------------------------
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+SpaceAfterTemplateKeyword: true
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCpp11BracedList: false
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeInheritanceColon: true
+SpaceBeforeParens: ControlStatements
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceBeforeSquareBrackets: false
+SpaceInEmptyBlock: false
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 2
+SpacesInAngles: Never
+SpacesInCStyleCastParentheses: false
+SpacesInConditionalStatement: false
+SpacesInContainerLiterals: true
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+
+# ---------------------------------------------------------------------------
+# Alignements (syntaxe moderne v14+)
+# ---------------------------------------------------------------------------
+AlignAfterOpenBracket: Align
+AlignArrayOfStructures: None
+AlignConsecutiveAssignments:
+  Enabled: false
+  AcrossEmptyLines: false
+  AcrossComments: false
+AlignConsecutiveBitFields:
+  Enabled: false
+  AcrossEmptyLines: false
+  AcrossComments: false
+AlignConsecutiveDeclarations:
+  Enabled: false
+  AcrossEmptyLines: false
+  AcrossComments: false
+AlignConsecutiveMacros:
+  Enabled: false
+  AcrossEmptyLines: false
+  AcrossComments: false
+AlignEscapedNewlines: Left
+AlignOperands: Align
+AlignTrailingComments:
+  Kind: Always
+  OverEmptyLines: 0
+
+# ---------------------------------------------------------------------------
+# Sauts de ligne et formes courtes
+# ---------------------------------------------------------------------------
+AllowAllArgumentsOnNextLine: true
+AllowAllParametersOfDeclarationOnNextLine: true
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortEnumsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: All
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortLambdasOnASingleLine: All
+AllowShortLoopsOnASingleLine: true
+
+AlwaysBreakAfterReturnType: None
+AlwaysBreakBeforeMultilineStrings: true
+AlwaysBreakTemplateDeclarations: Yes
+
+BinPackArguments: true
+BinPackParameters: true
+
+BreakBeforeBinaryOperators: None
+BreakBeforeConceptDeclarations: Always
+BreakBeforeTernaryOperators: true
+BreakConstructorInitializers: BeforeColon
+BreakInheritanceList: BeforeColon
+BreakStringLiterals: true
+
+# ---------------------------------------------------------------------------
+# Includes (style Google : regroupement par catégorie)
+# ---------------------------------------------------------------------------
+SortIncludes: CaseSensitive
 IncludeBlocks: Regroup
 IncludeCategories:
-  - Regex: "^<criterion/.*>$"
+  - Regex: '^<.*\.h>'        # En-têtes C système (<stdio.h>, <unistd.h>, ...)
     Priority: 1
-  - Regex: '^<.*\.h>$'
+  - Regex: '^<.*>'           # En-têtes C++ standard (<iostream>, <vector>, ...)
     Priority: 2
-  - Regex: "^<.*>$"
+  - Regex: '.*'              # Reste : headers du projet
     Priority: 3
-  - Regex: '^".*"$'
-    Priority: 4
+
+# ---------------------------------------------------------------------------
+# Using et namespaces
+# ---------------------------------------------------------------------------
+SortUsingDeclarations: true
+FixNamespaceComments: true
+CompactNamespaces: false
+ShortNamespaceLines: 1
+
+# ---------------------------------------------------------------------------
+# Lignes vides et séparation
+# ---------------------------------------------------------------------------
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 1
+SeparateDefinitionBlocks: Leave
+EmptyLineAfterAccessModifier: Never
+EmptyLineBeforeAccessModifier: LogicalBlock
+
+# ---------------------------------------------------------------------------
+# Constructeurs et initialisations
+# ---------------------------------------------------------------------------
+PackConstructorInitializers: NextLine
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+
+# ---------------------------------------------------------------------------
+# Commentaires
+# ---------------------------------------------------------------------------
+ReflowComments: true
+
+# ---------------------------------------------------------------------------
+# Pénalités (algorithme de choix des sauts de ligne)
+# ---------------------------------------------------------------------------
+PenaltyBreakAssignment: 2
+PenaltyBreakBeforeFirstCallParameter: 1
+PenaltyBreakComment: 300
+PenaltyBreakFirstLessLess: 120
+PenaltyBreakOpenParenthesis: 0
+PenaltyBreakString: 1000
+PenaltyBreakTemplateDeclaration: 10
+PenaltyExcessCharacter: 1000000
+PenaltyIndentedWhitespace: 0
+PenaltyReturnTypeOnItsOwnLine: 200
+
+# ---------------------------------------------------------------------------
+# Divers
+# ---------------------------------------------------------------------------
+InsertBraces: false                # ne force pas les {} sur if/for d'une ligne
+InsertNewlineAtEOF: true           # newline final obligatoire
+RemoveBracesLLVM: false
+RemoveSemicolon: false
