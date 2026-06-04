@@ -9,7 +9,7 @@
 #include <stdexcept>
 
 #include "../common.h"
-#include "../util/Log.hpp"
+#include "../utils/Log.hpp"
 #include "Connexion.hpp"
 
 // create socket -> setsockopt -> nonblock -> bind -> listen
@@ -68,7 +68,7 @@ void Server::append_to_poll(int fd) {
 }
 
 Server::~Server() {
-    Log::debug("~Destructor Server fd " + util::to_string(_fd));
+    Log::debug("~Destructor Server fd " + utils::to_string(_fd));
     for (std::map<int, Connexion*>::iterator it = _connexions.begin();
          it != _connexions.end(); ++it) {
         delete it->second;  // destructor closes fd

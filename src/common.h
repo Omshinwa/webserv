@@ -17,8 +17,8 @@
 #include <stdexcept>
 #include <vector>
 
-#include "./util/Log.hpp"
-#include "./util/util.hpp"
+#include "./utils/Log.hpp"
+#include "./utils/Utils.hpp"
 
 std::ostream& operator<<(std::ostream& os, const sockaddr_in& addr);
 
