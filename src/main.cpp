@@ -3,7 +3,7 @@
 #include "server/Server.hpp"
 #include "utils/Log.hpp"
 
-static const char* DEFAULT_CONFIG = "configs/default.conf";
+static const char*  DEFAULT_CONFIG = "configs/default.conf";
 
 int main(int ac, char** av) {
     std::string config_path = DEFAULT_CONFIG;

@@ -1,7 +1,8 @@
-#include "RequestParser.hpp"
+#include <string>
+#include <vector>
 
+#include "RequestParser.hpp"
 #include "ResponseBuilder.hpp"
-#include "../common.h"
 
 // The parser shares the buffer with Connexion
 RequestParser::RequestParser(std::string& buffer)

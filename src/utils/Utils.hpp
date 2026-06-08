@@ -24,7 +24,21 @@ namespace utils {
         return oss.str();
     }
 
-    
-}  // namespace Utils
+    // numeric parsing - returns false on failure
+    bool    parse_int(const std::string& s, int& out);
+    bool    parse_size(const std::string& s, int& out);
+
+    // filesystem
+    bool        file_exists(const std::string& path);
+    bool        is_directory(const std::string& path);
+    bool        is_regular_file(const std::string& path);
+    bool        is_readable(const std::string& path);
+    bool        is_writable(const std::string& path);
+    bool        is_executable(const std::string& path);
+    bool        write_file(const std::string& path, const std::string& content);
+    std::string read_file(const std::string& path);
+    std::string join_path(const std::string& a, const std::string& b);
+    std::string normalize_path(const std::string& path);
+}
 
 #endif

@@ -1,13 +1,13 @@
-#include "Connexion.hpp"
-
-#include <sys/socket.h>
 
 #include <cerrno>
 #include <cstring>
 #include <iostream>
 #include <stdexcept>
 
-#include "../common.h"
+#include <sys/socket.h>
+#include <fcntl.h>
+
+#include "Connexion.hpp"
 
 // Connexion handles the buffers for reading and writing
 // It creates the Request and Response

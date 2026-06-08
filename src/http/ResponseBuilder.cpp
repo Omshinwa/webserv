@@ -1,8 +1,7 @@
-#include "ResponseBuilder.hpp"
-
 #include <fstream>
+#include <sstream>
 
-#include "../common.h"
+#include "ResponseBuilder.hpp"
 
 std::string ResponseBuilder::build(RequestParser&) {
     const std::string filepath = "./www/index.html";

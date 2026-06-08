@@ -1,16 +1,16 @@
-#include "Server.hpp"
+#include <cerrno>
+#include <cstring>
+#include <iostream>
+#include <stdexcept>
 
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include <cerrno>
-#include <cstring>
-#include <stdexcept>
-
-#include "../common.h"
-#include "../utils/Log.hpp"
 #include "Connexion.hpp"
+#include "Server.hpp"
+#include "../utils/Log.hpp"
+#include "../utils/Utils.hpp"
 
 // create socket -> setsockopt -> nonblock -> bind -> listen
 Server::Server()
@@ -68,7 +68,7 @@ void Server::append_to_poll(int fd) {
 }
 
 Server::~Server() {
-    Log::debug("~Destructor Server fd " + utils::to_string(_fd));
+    Log::debug("~Destructor Server fd " + util::to_string(_fd));
     for (std::map<int, Connexion*>::iterator it = _connexions.begin();
          it != _connexions.end(); ++it) {
         delete it->second;  // destructor closes fd

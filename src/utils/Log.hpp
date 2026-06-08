@@ -1,5 +1,5 @@
-#ifndef LOG_H
-#define LOG_H
+#ifndef LOG_HPP
+# define LOG_HPP
 
 #include <string>
 
@@ -47,7 +47,7 @@ class Log {
 
       static std::string rgb_to_ansi(int r, int g, int b);
 
-      static void setLevel(Level lvl);
+      static void set_level(Level lvl);
       static void debug(const std::string& s);
       static void info(const std::string& s);
       static void warning(const std::string& s);

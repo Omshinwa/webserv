@@ -66,7 +66,7 @@ std::string Log::rgb_to_ansi(int r, int g, int b) {
     return oss.str();
 }
 
-void    Log::setLevel(Level lvl) { _level = lvl; }
+void    Log::set_level(Level lvl) { _level = lvl; }
 
 void    Log::debug(const std::string& s) {
     std::cout << rgb_to_ansi(255, 240, 240) << s << nl;

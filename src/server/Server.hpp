@@ -1,40 +1,38 @@
 #ifndef SERVER_HPP
 # define SERVER_HPP
 
-# include <netinet/in.h>
-# include <poll.h>
-
-# include <map>
-# include <string>
 # include <vector>
 
-class Connexion;
+# include <poll.h>
 
-class Server {
-  public:
-    Server();
-    ~Server();
+class   Connexion;
 
-    void run();
+class   Server
+{
+    private:
+        int                         _fd;
+        int                         _port;
+        std::vector<pollfd>         _pollfds;
+        std::map<int, Connexion*>   _connexions;
 
-  private:
-    int _fd;
-    int _port;
-    std::vector<pollfd> _pollfds;
-    std::map<int, Connexion*> _connexions;
+        void    append_to_poll(int fd);
+        void    accept_new_connexion();
+        void    drop_connexion(Connexion* c);
+        void    handle_event(pollfd& pfd);
 
-    void append_to_poll(int fd);
-    void accept_new_connexion();
-    void drop_connexion(Connexion* c);
-    void handle_event(pollfd& pfd);
+        void    log_debug(std::string s);
+        void    log_info(std::string s);
+        void    log_event(std::string s);
+        void    log_error(std::string s);
 
-    void log_debug(std::string s);
-    void log_info(std::string s);
-    void log_event(std::string s);
-    void log_error(std::string s);
+        Server(const Server&);
+        Server& operator=(const Server&);
 
-    Server(const Server&);
-    Server& operator=(const Server&);
+    public:
+        Server();
+        ~Server();
+
+        void    run();
 };
 
 #endif

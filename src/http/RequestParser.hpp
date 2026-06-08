@@ -1,7 +1,7 @@
 #ifndef REQUESTPARSER_H
-#define REQUESTPARSER_H
+# define REQUESTPARSER_H
 
-#include "../common.h"
+# include <map>
 
 typedef std::map<std::string, std::string> t_dict;
 
