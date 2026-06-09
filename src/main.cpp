@@ -1,7 +1,8 @@
-#include <iostream>
-
+#include "config/Config.hpp"
 #include "server/Server.hpp"
 #include "utils/Log.hpp"
+
+#include <iostream>
 
 static const char*  DEFAULT_CONFIG = "configs/default.conf";
 
@@ -17,8 +18,8 @@ int main(int ac, char** av) {
         config_path = av[1];
 
     try {
-        Server server;
-        server.run();
+        std::vector<ServerConfig> configs = Config::parse(config_path);
+        // utiliser les donnees parsse et lancer run
     }
     catch (const std::exception& e) {
         Log::error(e.what());

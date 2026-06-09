@@ -1,11 +1,13 @@
+#include "Utils.hpp"
+
 #include <climits>
 #include <fstream>
 #include <sstream>
 
+#include <fcntl.h>
 #include <unistd.h>
 #include <sys/stat.h>
 
-#include "Utils.hpp"
 
 namespace   utils {
 
@@ -231,6 +233,36 @@ namespace   utils {
         if (trailing_slash && out != "/" && out[out.size() - 1] != '/')
             out += "/";
         return out;
+    }
+
+    bool    set_non_blocking(int fd) {
+        return (fcntl(fd, F_SETFL, O_NONBLOCK) != -1);
+    }
+
+    bool    parse_host_port(const std::string& s, std::string& host, int& port) {
+        if (s.empty())
+            return false;
+
+        size_t  colon = s.find(':');
+        if (colon == std::string::npos) {
+            int p;
+            if (parse_int(s, p) && p > 0 && p < 65536) {
+                host = "0.0.0.0";
+                port = p;
+                return true;
+            }
+            host = s;
+            port = 8080;
+            return true;
+        }
+        host = s.substr(0, colon);
+        if (host.empty())
+            host = "0.0.0.0";
+        int p;
+        if (!parse_int(s.substr(colon + 1), p) || p <= 0 || p >= 65536)
+            return false;
+        port = p;
+        return true;
     }
 }
 

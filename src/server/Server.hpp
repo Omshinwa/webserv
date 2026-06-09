@@ -1,7 +1,11 @@
 #ifndef SERVER_HPP
 # define SERVER_HPP
 
+# include "../config/Config.hpp"
+
 # include <vector>
+# include <map>
+# include <string>
 
 # include <poll.h>
 
@@ -29,7 +33,7 @@ class   Server
         Server& operator=(const Server&);
 
     public:
-        Server();
+        Server(const std::vector<ServerConfig>& configs);
         ~Server();
 
         void    run();

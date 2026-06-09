@@ -39,6 +39,10 @@ namespace utils {
     std::string read_file(const std::string& path);
     std::string join_path(const std::string& a, const std::string& b);
     std::string normalize_path(const std::string& path);
+
+    // net helpers
+    bool    set_non_blocking(int fd);
+    bool    parse_host_port(const std::string& s, std::string& host, int& port);
 }
 
 #endif

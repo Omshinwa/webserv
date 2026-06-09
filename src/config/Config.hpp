@@ -46,7 +46,7 @@ class   Config {
         ~Config();
 
     public:
-        std::vector<ServerConfig>   parse(const std::string& path);
+        static std::vector<ServerConfig>   parse(const std::string& path);
 };
 
 #endif

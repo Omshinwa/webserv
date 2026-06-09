@@ -12,6 +12,8 @@
 #include "../utils/Log.hpp"
 #include "../utils/Utils.hpp"
 
+Server::Server(const std::vector<ServerConfig>& configs) : _configs(configs) {}
+
 // create socket -> setsockopt -> nonblock -> bind -> listen
 Server::Server()
         : _fd(-1),

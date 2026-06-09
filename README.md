@@ -8,3 +8,6 @@ Utilitee d'utiliser common.hpp ? la norme est que chaque ficher doit posseder to
 https://google.github.io/styleguide/cppguide.html lien contenant les normes d'ecriture (check : self-contained Headers)
 
 terminer parsing de fichier .conf utiliser namespace anonyme pour simplifier l'ecriture du parsing ou trouver une autre facon plus clean d'ecrire le parsing peut etre rajouter un dossier confighelper pour rendre plus lisible le code
+voir body_size_max* location config
+
+refaire proprement la class server pour que ca match avec la nouvelle archi
