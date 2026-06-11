@@ -9,8 +9,8 @@
 #include <cstring>
 #include <iostream>
 #include <stdexcept>
-#include <utils/Log.hpp>
-#include <utils/Utils.hpp>
+#include "../utils/Log.hpp"
+#include "../utils/Utils.hpp"
 
 // Connexion handles the buffers for reading and writing
 // It creates the Request and Response

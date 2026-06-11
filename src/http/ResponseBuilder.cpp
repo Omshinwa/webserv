@@ -5,7 +5,7 @@
 #include <fstream>
 #include <sstream>
 
-#include "utils/Log.hpp"
+#include "../utils/Log.hpp"
 
 std::string ResponseBuilder::build(RequestParser&) {
     const std::string filepath = "./www/index.html";
