@@ -1,5 +1,6 @@
 #include "RequestParser.hpp"
 
+#include <cstdlib>
 #include <string>
 #include <vector>
 
@@ -8,12 +9,15 @@
 #include "utils/Utils.hpp"
 
 // The parser shares the buffer with Connexion
+
 RequestParser::RequestParser(std::string& buffer)
-        : _state(INCOMPLETE), _status_code(0), buffer(buffer), scan_pos(0) {
+        : _state(INCOMPLETE_HEADER), _status_code(0), buffer(buffer), scan_pos(0) {
     Log::debug("Request Parser Creation");
 }
 
 RequestParser::~RequestParser() { Log::debug("Request Parser Destructor"); }
+
+///
 
 // "GET / HTTP/1.1"
 void RequestParser::parse_start_line(std::string line) {
@@ -28,10 +32,10 @@ void RequestParser::parse_start_line(std::string line) {
     method = items[0];
     URI = items[1];
     protocol = items[2];
-    Log::event("PARSE OBJECT:");
-    Log::info("method: " + method);
-    Log::info("URI: " + URI);
-    Log::info("protocol: " + protocol);
+    // Log::event("PARSE OBJECT:");
+    // Log::info("method: " + method);
+    // Log::info("URI: " + URI);
+    // Log::info("protocol: " + protocol);
 }
 
 void RequestParser::parse_header_line(std::string line) {
@@ -44,6 +48,7 @@ void RequestParser::parse_header_line(std::string line) {
     }
     key = line.substr(0, colon_pos);
     value = line.substr(colon_pos + 1);
+    // if theres a space in the key = ERROR
     if (key.find_first_of(" ") != std::string::npos) {
         _state = ERROR;
         return;
@@ -52,13 +57,30 @@ void RequestParser::parse_header_line(std::string line) {
     key = utils::to_lower(key);
     value = utils::trim(value);
     header[key] = value;
-    Log::info(key + " : " + value);
+    // Log::info(key + " : " + value);
+}
+
+// Just checking that its a valid positive number
+void RequestParser::parse_content_range() {
+    char* end;
+    long cl = std::strtol(header["content-length"].c_str(), &end, 10);
+
+    errno = 0;
+    if (end == header["content-length"].c_str()
+        // no digits at all ("", "abc")
+        || *end != '\0'     // trailing garbage ("123abc", "12 34")
+        || errno == ERANGE  // overflow (number too big for long)
+        || cl < 0) {        // negative ("-5")
+        _state = ERROR;
+        return;
+    }
+    content_length = static_cast<size_t>(cl);
 }
 
 // Only call it when we have the full header in buffer
-void RequestParser::parse_header() {
+void RequestParser::parse_header(std::string header_data, std::string delim) {
     std::vector<std::string> lines;
-    lines = utils::split(buffer, "\r\n");
+    lines = utils::split(header_data, delim);
 
     for (std::vector<std::string>::iterator it = lines.begin(); it != lines.end(); it++) {
         if (it == lines.begin())
@@ -77,30 +99,63 @@ void RequestParser::parse_header() {
         return;
     }
 
+    // if theres no content-length key, we have the full request
+    if (header.find("content-length") == header.end()) {
+        Log::info("No content length!");
+        _state = COMPLETE;
+    } else {
+        Log::info("Content length: " + header["content-length"]);
+        _state = INCOMPLETE_BODY;
+        parse_content_range();
+    }
+
     Log::event("HEADER OK");
 }
 
 void RequestParser::parse() {
-    const std::string header_delim = "\r\n\r\n";
+    if (_state == INCOMPLETE_HEADER) {
+        size_t header_end = std::string::npos;
 
-    // we dont use split(), i'm remembering scan_pos for the last time
-    // we checked, slight optimization
-    size_t header_end = buffer.find(header_delim, scan_pos);
-    if (header_end == std::string::npos) {
-        if (buffer.length() > header_delim.length()) {
-            scan_pos = buffer.length() - header_delim.length();
-            if (buffer.size() > MAX_HEADER_SIZE) _state = ERROR;
+        std::string delim = "";
+        // we will successively try \r\n\r\n then \n\n and set
+        // DELIM to that one
+
+        // Check for standard \r\n\r\n first
+        size_t pos_crlf = buffer.find("\r\n\r\n", scan_pos);
+        // Check for tolerant \n\n
+        size_t pos_lf = buffer.find("\n\n", scan_pos);
+
+        if (pos_crlf != std::string::npos &&
+            (pos_lf == std::string::npos || pos_crlf < pos_lf)) {
+            header_end = pos_crlf;
+            delim = "\r\n";
+        } else if (pos_lf != std::string::npos) {
+            header_end = pos_lf;
+            delim = "\n";
         }
-        return;
-    }
-    buffer.resize(header_end);
-    parse_header();
-    if (_state == ERROR) {
-        _status_code = 400;
-        return;
-    }
 
-    _state = COMPLETE;
+        if (header_end == std::string::npos) {
+            // if we read more than 4 bytes....
+            if (buffer.length() > 4) {
+                // scan_pos = length we read (minus 4, in case \r\n\r\n was
+                // given cut)
+                scan_pos = buffer.length() - 4;
+                if (buffer.size() > MAX_HEADER_SIZE) _state = ERROR;
+            }
+            return;
+        }
 
-    // TODO: read X bytes from the body
+        parse_header(buffer.substr(0, header_end), delim);
+        buffer = buffer.substr(header_end + delim.length() * 2);
+        if (_state == ERROR) {
+            _status_code = 400;
+            return;
+        }
+    }
+    if (_state == INCOMPLETE_BODY) {
+        if (buffer.size() < content_length) return;
+
+        body = buffer.substr(0, content_length);
+        _state = COMPLETE;
+    }
 }

@@ -198,11 +198,11 @@ void Server::accept_new_connexion() {
 void Server::drop_connexion(Connexion* c) {
     int fd = c->fd;
     _connexions.erase(fd);
+    log_event("CLOSED Client Socket FD: " + utils::to_str(c->fd));
     delete c;  // destructor closes the fd
     for (size_t i = 0; i < _pollfds.size(); i++) {
         if (_pollfds[i].fd == fd) {
             _pollfds.erase(_pollfds.begin() + i);
-            log_event("CLOSED Client Socket FD: " + utils::to_str(fd));
             break;
         }
     }

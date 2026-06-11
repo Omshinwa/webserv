@@ -46,9 +46,11 @@ void Connexion::do_recv() {
         _state = CLOSING;  // some error
     }
 
-    Log::info("parse state: " + utils::to_str(request.state()));
+    // Log::info("parse state: " + utils::to_str(request.state()));
     switch (request.state()) {
-        case RequestParser::INCOMPLETE:
+        case RequestParser::INCOMPLETE_HEADER:
+            break;
+        case RequestParser::INCOMPLETE_BODY:
             break;
         case RequestParser::COMPLETE:
             _state = CLOSING;
@@ -59,6 +61,7 @@ void Connexion::do_recv() {
             queue_response();
             break;
     }
+
     return;
 }
 
