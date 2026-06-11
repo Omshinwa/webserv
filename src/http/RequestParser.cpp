@@ -1,5 +1,6 @@
 #include "RequestParser.hpp"
 
+#include <cerrno>
 #include <cstdlib>
 #include <string>
 #include <vector>

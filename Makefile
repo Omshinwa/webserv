@@ -7,6 +7,7 @@ CXX			=	c++ -Wall -Wextra -Werror -std=c++98 -g3 -MMD -MP $(INCLUDES)
 RM			=	rm -rf
 
 SRC			=	src/main.cpp					\
+				src/config/Config.cpp			\
 				src/utils/Log.cpp				\
 				src/utils/Utils.cpp				\
 				src/server/Connexion.cpp		\

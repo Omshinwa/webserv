@@ -100,7 +100,8 @@ bool parse_size(const std::string& s, size_t& out) {
 
     if (end == s.c_str()) return false;
 
-    if ((*end == 'K' || *end == 'k') && *(end + 1) == '\0')
+    if (*end == '\0') mult = 1;
+    else if ((*end == 'K' || *end == 'k') && *(end + 1) == '\0')
         mult = 1024UL;
     else if ((*end == 'M' || *end == 'm') && *(end + 1) == '\0')
         mult = 1024UL * 1024;

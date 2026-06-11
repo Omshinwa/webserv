@@ -1,6 +1,8 @@
 #ifndef SERVER_HPP
 #define SERVER_HPP
 
+#include "../config/Config.hpp"
+
 #include <netinet/in.h>
 #include <poll.h>
 
@@ -12,7 +14,7 @@ class Connexion;
 
 class Server {
     public:
-    Server();
+    Server(const std::vector<ServerConfig>& configs);
     ~Server();
 
     void run();  // main poll loop, blocks forever
@@ -20,6 +22,8 @@ class Server {
     private:
     int _fd;
     int _port;
+    std::string _host;
+    std::vector<ServerConfig> _configs;
     std::vector<pollfd> _pollfds;           // list of all the poll requests
     std::map<int, Connexion*> _connexions;  // int fd -> Connexion*
 
@@ -36,7 +40,7 @@ class Server {
     void log_error(std::string s);
 
     // INNACCESSIBLE
-
+    Server();
     Server(const Server&);
     Server& operator=(const Server&);
 };

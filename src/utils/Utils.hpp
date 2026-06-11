@@ -26,7 +26,7 @@ namespace utils {
 
     // numeric parsing - returns false on failure
     bool    parse_int(const std::string& s, int& out);
-    bool    parse_size(const std::string& s, int& out);
+    bool    parse_size(const std::string& s, size_t& out);
 
     // filesystem
     bool        file_exists(const std::string& path);

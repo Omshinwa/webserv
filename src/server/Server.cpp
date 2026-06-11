@@ -18,9 +18,11 @@
 std::ostream& operator<<(std::ostream& os, const sockaddr_in& addr);
 
 // create socket -> setsockopt -> nonblock -> bind -> listen
-Server::Server()
+Server::Server(const std::vector<ServerConfig>& configs)
         : _fd(-1),
-          _port(8080)  // eventually gotta do this through config?
+          _port(configs[0].port),
+          _host(configs[0].host),
+          _configs(configs)
 {
     // create the socket
     {
