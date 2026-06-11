@@ -6,20 +6,20 @@
 
 #include <string>
 
-#include "RequestParser.hpp"
-#include "ResponseBuilder.hpp"
+#include "../http/RequestParser.hpp"
+#include "../http/ResponseBuilder.hpp"
 
 class Connexion {
-public:
+  public:
     enum State {
-        READING, // waiting for request bytes
-        WRITING, // response queued, sending it out
-        CLOSING // mark for removal from poll set
+        READING,  // waiting for request bytes
+        WRITING,  // response queued, sending it out
+        CLOSING   // mark for removal from poll set
     };
 
     const int fd;
 
-    explicit Connexion(int listen_fd); // does accept(); throws on failure
+    explicit Connexion(int listen_fd);  // does accept(); throws on failure
     ~Connexion();
 
     State state() const;
@@ -37,7 +37,7 @@ public:
     // Once you've parsed a complete request, build the response and call this.
     void queue_response();
 
-private:
+  private:
     State _state;
     std::string _recv_buf;
     std::string _send_buf;
@@ -55,8 +55,8 @@ private:
     // INNACCESSIBLE
     // we dont allow several Connexion for one fd
     Connexion();
-    Connexion(const Connexion &);
-    Connexion &operator=(const Connexion &);
+    Connexion(const Connexion&);
+    Connexion& operator=(const Connexion&);
 };
 
 #endif

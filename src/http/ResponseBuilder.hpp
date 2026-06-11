@@ -4,18 +4,17 @@
 #include "RequestParser.hpp"
 
 class ResponseBuilder {
-
-public:
+  public:
     // ResponseBuilder(RequestParser &);
     // ~ResponseBuilder();
 
-    static std::string build(RequestParser &);
+    static std::string build(RequestParser&);
 
-private:
+  private:
     // INACCESSIBLE
     ResponseBuilder();
-    ResponseBuilder(const ResponseBuilder &);
-    ResponseBuilder &operator=(const ResponseBuilder &);
+    ResponseBuilder(const ResponseBuilder&);
+    ResponseBuilder& operator=(const ResponseBuilder&);
 };
 
 #endif

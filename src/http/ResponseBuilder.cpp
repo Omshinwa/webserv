@@ -1,11 +1,9 @@
+#include <fstream>
+#include <sstream>
+
 #include "ResponseBuilder.hpp"
 
-#include <fstream>
-
-#include "common.h"
-
-std::string ResponseBuilder::build(RequestParser &)
-{
+std::string ResponseBuilder::build(RequestParser&) {
     const std::string filepath = "./www/index.html";
     std::ifstream file(filepath.c_str(), std::ios::binary);
     if (!file.is_open()) {
