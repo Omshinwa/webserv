@@ -1,10 +1,21 @@
-#ifndef LOG_H
-#define LOG_H
+#ifndef LOG_HPP
+#define LOG_HPP
 
 #include <string>
 
 class Log {
-public:
+    public:
+    enum Level { DEBUG = 0, INFO = 1, WARNING = 2, ERROR = 3, NONE = 4 };
+
+    private:
+    static Level _level;
+
+    Log();
+    Log(const Log& src);
+    Log& operator=(const Log& src);
+    ~Log();
+
+    public:
     static int color_idx;
 
     static const std::string red;
@@ -31,20 +42,17 @@ public:
     static const std::string reset;
     static const std::string nl;
 
-    // FUNCTIONS
-
-    static const std::string c(int n);
-    static const std::string b(int n);
+    static const std::string color(int n);
+    static const std::string background(int n);
 
     static std::string rgb_to_ansi(int r, int g, int b);
 
-    static void debug(const std::string s);
-    static void info(const std::string s);
+    static void set_level(Level lvl);
+    static void debug(const std::string& s);
+    static void info(const std::string& s);
     static void event(const std::string s);
-    static void error(const std::string s);
-
-private:
-    Log(); // not instantiable
+    static void warning(const std::string& s);
+    static void error(const std::string& s);
 };
 
 #endif

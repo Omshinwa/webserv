@@ -3,6 +3,8 @@
 #include <iostream>
 #include <sstream>
 
+Log::Level Log::_level = Log::INFO;
+
 int Log::color_idx = 0;
 const std::string Log::red = "\033[31m";
 const std::string Log::green = "\033[32m";
@@ -29,19 +31,16 @@ const std::string Log::reset = "\033[0m";
 const std::string Log::nl = "\033[0m\n";
 
 // get a color %n
-const std::string Log::c(int n)
-{
-    static const std::string palette[]
-        = { black, red, green, yellow, blue, magenta, cyan };
+const std::string Log::color(int n) {
+    static const std::string palette[] = {black, red, green, yellow, blue, magenta, cyan};
     static const int N = sizeof(palette) / sizeof(palette[0]);
     return palette[n % N];
 }
 
 // get a background color %n
-const std::string Log::b(int n)
-{
-    static const std::string palette[] = { black_bg, red_bg, green_bg,
-        yellow_bg, blue_bg, magenta_bg, cyan_bg };
+const std::string Log::background(int n) {
+    static const std::string palette[] = {black_bg, red_bg,     green_bg, yellow_bg,
+                                          blue_bg,  magenta_bg, cyan_bg};
     static const int N = sizeof(palette) / sizeof(palette[0]);
     return white + palette[n % N];
 }
@@ -55,8 +54,7 @@ const std::string Log::b(int n)
 // }
 
 // auto downscale from 0-255 -> 0-5
-std::string Log::rgb_to_ansi(int r, int g, int b)
-{
+std::string Log::rgb_to_ansi(int r, int g, int b) {
     // map 0-255 -> 0-5 (each step is 51 wide)
     int ri = r * 6 / 256;
     int gi = g * 6 / 256;
@@ -68,13 +66,16 @@ std::string Log::rgb_to_ansi(int r, int g, int b)
     return oss.str();
 }
 
-void Log::debug(const std::string s)
-{
+void Log::set_level(Level lvl) { _level = lvl; }
+
+void Log::debug(const std::string& s) {
     std::cout << rgb_to_ansi(255, 240, 240) << s << nl;
 }
 
-void Log::error(const std::string s) { std::cerr << red << s << nl; }
+void Log::info(const std::string& s) { std::cout << color(color_idx) << s << "\n"; }
 
-void Log::info(const std::string s) { std::cout << c(color_idx) << s << "\n"; }
+void Log::error(const std::string& s) { std::cerr << red << s << nl; }
 
-void Log::event(const std::string s) { std::cout << b(color_idx) << s << nl; }
+void Log::warning(const std::string& s) { std::cout << background(color_idx) << s << nl; }
+
+void Log::event(const std::string s) { warning(s); }
