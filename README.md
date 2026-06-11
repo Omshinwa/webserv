@@ -11,3 +11,11 @@ terminer parsing de fichier .conf utiliser namespace anonyme pour simplifier l'e
 voir body_size_max* location config
 
 refaire proprement la class server pour que ca match avec la nouvelle archi
+
+Log, Utils
+   └─> Config
+          └─> Request, Response
+                 └─> Client
+                        └─> Server
+                               └─> Handler ──> Cgi
+                                      └─> main
