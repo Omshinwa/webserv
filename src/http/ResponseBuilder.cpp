@@ -1,7 +1,11 @@
+#include "ResponseBuilder.hpp"
+
+#include <cerrno>
+#include <cstring>
 #include <fstream>
 #include <sstream>
 
-#include "ResponseBuilder.hpp"
+#include "utils/Log.hpp"
 
 std::string ResponseBuilder::build(RequestParser&) {
     const std::string filepath = "./www/index.html";

@@ -1,18 +1,21 @@
-#include <cerrno>
-#include <cstring>
-#include <iostream>
-#include <stdexcept>
+#include "Server.hpp"
 
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "Connexion.hpp"
-#include "Server.hpp"
+#include <cerrno>
+#include <cstring>
+#include <iostream>
+#include <stdexcept>
+
 #include "../utils/Log.hpp"
 #include "../utils/Utils.hpp"
+#include "Connexion.hpp"
 
-Server::Server(const std::vector<ServerConfig>& configs) : _configs(configs) {}
+// Server::Server(const std::vector<ServerConfig>& configs) : _configs(configs) {}
+
+std::ostream& operator<<(std::ostream& os, const sockaddr_in& addr);
 
 // create socket -> setsockopt -> nonblock -> bind -> listen
 Server::Server()
@@ -70,7 +73,7 @@ void Server::append_to_poll(int fd) {
 }
 
 Server::~Server() {
-    Log::debug("~Destructor Server fd " + util::to_string(_fd));
+    Log::debug("~Destructor Server fd " + utils::to_str(_fd));
     for (std::map<int, Connexion*>::iterator it = _connexions.begin();
          it != _connexions.end(); ++it) {
         delete it->second;  // destructor closes fd
@@ -179,7 +182,7 @@ void Server::accept_new_connexion() {
         int connexion_fd = accept(_fd, NULL, NULL);
         if (connexion_fd < 0) throw std::runtime_error(std::strerror(errno));
         c = new Connexion(connexion_fd);
-        log_event("NEW Client Socket FD: " + util::to_string(c->fd));
+        log_event("NEW Client Socket FD: " + utils::to_str(c->fd));
     } catch (const std::exception& e) {
         log_error(std::string("accept error: ") + e.what());
         return;
@@ -195,11 +198,11 @@ void Server::accept_new_connexion() {
 void Server::drop_connexion(Connexion* c) {
     int fd = c->fd;
     _connexions.erase(fd);
+    log_event("CLOSED Client Socket FD: " + utils::to_str(c->fd));
     delete c;  // destructor closes the fd
     for (size_t i = 0; i < _pollfds.size(); i++) {
         if (_pollfds[i].fd == fd) {
             _pollfds.erase(_pollfds.begin() + i);
-            log_event("CLOSED Client Socket FD: " + util::to_string(c->fd));
             break;
         }
     }
@@ -216,9 +219,11 @@ void Server::drop_connexion(Connexion* c) {
 //
 //
 
-void Server::log_info(std::string s) { std::cout << Log::c(_fd) << s << Log::nl; }
+void Server::log_info(std::string s) { std::cout << Log::color(_fd) << s << Log::nl; }
 
-void Server::log_event(std::string s) { std::cout << Log::b(_fd) << s << Log::nl; }
+void Server::log_event(std::string s) {
+    std::cout << Log::background(_fd) << s << Log::nl;
+}
 
 void Server::log_error(std::string s) { Log::error(s); }
 

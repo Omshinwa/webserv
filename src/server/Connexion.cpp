@@ -1,13 +1,16 @@
 
+#include "Connexion.hpp"
+
+#include <fcntl.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
 #include <cerrno>
 #include <cstring>
 #include <iostream>
 #include <stdexcept>
-
-#include <sys/socket.h>
-#include <fcntl.h>
-
-#include "Connexion.hpp"
+#include <utils/Log.hpp>
+#include <utils/Utils.hpp>
 
 // Connexion handles the buffers for reading and writing
 // It creates the Request and Response
@@ -18,7 +21,7 @@ Connexion::Connexion(int fd)
 }
 
 Connexion::~Connexion() {
-    Log::debug("~Destructor Connexion fd " + util::to_string(fd));
+    Log::debug("~Destructor Connexion fd " + utils::to_str(fd));
     if (fd >= 0) close(fd);
 }
 
@@ -33,7 +36,7 @@ void Connexion::do_recv() {
     if (n > 0) {
         buf[n] = '\0';
         _recv_buf.append(buf, n);
-        log_event("<    file descriptor " + util::to_string(fd) + " sent:");
+        log_event("<    file descriptor " + utils::to_str(fd) + " sent:");
         log_info(buf);
         request.parse();
     } else if (n == 0) {
@@ -43,9 +46,11 @@ void Connexion::do_recv() {
         _state = CLOSING;  // some error
     }
 
-    Log::info("parse state: " + util::to_string(request.state()));
+    // Log::info("parse state: " + utils::to_str(request.state()));
     switch (request.state()) {
-        case RequestParser::INCOMPLETE:
+        case RequestParser::INCOMPLETE_HEADER:
+            break;
+        case RequestParser::INCOMPLETE_BODY:
             break;
         case RequestParser::COMPLETE:
             _state = CLOSING;
@@ -56,6 +61,7 @@ void Connexion::do_recv() {
             queue_response();
             break;
     }
+
     return;
 }
 
@@ -69,7 +75,7 @@ ssize_t Connexion::do_send() {
     if (n > 0) {
         _send_offset += n;
 
-        log_event(">    sent to file descriptor " + util::to_string(fd));
+        log_event(">    sent to file descriptor " + utils::to_str(fd));
         log_info(buf);
         // if (_send_offset >= _send_buf.size())
         //     _state = CLOSING; // HTTP/1.0-style: close after response

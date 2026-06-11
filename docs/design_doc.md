@@ -78,7 +78,13 @@ and closedir.
 https://en.wikipedia.org/wiki/List_of_HTTP_status_codes
 
 
-nc localhost 8080
+* to connect in the terminal, use:
+`nc localhost 8080`
+
+followed by those lines
+GET / HTTP/1.1
+Host: localhost
+then double Enter
 
 1. let's make a hello world TCP server that accepts one connexion and echoes back.
 2. non-blocking + poll() — handle multiple clients simultaneously
