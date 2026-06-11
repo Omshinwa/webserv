@@ -5,8 +5,8 @@
 #include <vector>
 
 #include "ResponseBuilder.hpp"
-#include "utils/Log.hpp"
-#include "utils/Utils.hpp"
+#include "../utils/Log.hpp"
+#include "../utils/Utils.hpp"
 
 // The parser shares the buffer with Connexion
 
