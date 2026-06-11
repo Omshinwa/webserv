@@ -1,42 +1,45 @@
-NAME		=	webserv
+NAME = webserv
 
-INCLUDES	=	-I src -I src/util -I src/server -I src/http
+# a changer avant la correction
+SRC =	src/main.cpp \
+		src/util/Log.cpp \
+		src/server/Connexion.cpp \
+		src/server/Server.cpp \
+		src/http/RequestParser.cpp \
+		src/http/ResponseBuilder.cpp 
 
-CXX			=	c++ -Wall -Wextra -Werror -std=c++98 -g3 -MMD -MP $(INCLUDES)
+OBJ = $(SRC:.cpp=.o)
 
-RM			=	rm -rf
+SRC_DIR = .
+OBJ_DIR = build
 
-SRC			=	src/main.cpp					\
-				src/utils/Log.cpp				\
-				src/utils/Utils.cpp				\
-				src/server/Connexion.cpp		\
-				src/server/Server.cpp			\
-				src/http/RequestParser.cpp		\
-				src/http/ResponseBuilder.cpp
+SOURCE_FILES = $(addprefix $(SRC_DIR)/, $(SRC))
+OBJECT_FILES = $(addprefix $(OBJ_DIR)/, $(OBJ))
+DEPENDANCIES = $(OBJECT_FILES:.o=.d)
 
-OBJ			=	$(SRC:.cpp=.o)
+INCLUDES = -I src -I src/util -I src/server -I src/http
 
-OBJ_DIR		=	build/
+CXX = c++ -Wall -Wextra -Werror -std=c++98 -g3 -MMD -MP $(INCLUDES)
 
-OBJECT_FILES = $(addprefix $(OBJ_DIR), $(OBJ))
-
-
+# Rules
 all: $(NAME)
 
+# linking
 $(NAME): $(OBJECT_FILES) Makefile
 	$(CXX) $(OBJECT_FILES) -o $(NAME)
 
-$(OBJ_DIR)%.o: %.cpp
+# $(OBJECT_FILES): $(SOURCE_FILES)
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	mkdir -p $(dir $@)
 	$(CXX) -c $< -o $@
 
--include $(OBJECT_FILES:.o=.d)
+-include $(DEPENDANCIES)
 
 clean:
-	$(RM) $(OBJ_DIR)
+	rm -rf $(OBJ_DIR)
 
 fclean: clean
-	$(RM) $(NAME)
+	rm -f $(NAME)
 
 re: fclean all
 
