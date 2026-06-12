@@ -24,7 +24,7 @@ class RequestParser {
 
     State _state;
 
-    int _status_code;
+    int status_code;
 
     //
     std::string method;

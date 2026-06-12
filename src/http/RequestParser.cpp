@@ -5,14 +5,14 @@
 #include <string>
 #include <vector>
 
-#include "ResponseBuilder.hpp"
 #include "../utils/Log.hpp"
 #include "../utils/Utils.hpp"
+#include "ResponseBuilder.hpp"
 
 // The parser shares the buffer with Connexion
 
 RequestParser::RequestParser(std::string& buffer)
-        : _state(INCOMPLETE_HEADER), _status_code(0), buffer(buffer), scan_pos(0) {
+        : state(INCOMPLETE_HEADER), status_code(0), buffer(buffer), scan_pos(0) {
     Log::debug("Request Parser Creation");
 }
 
@@ -149,7 +149,7 @@ void RequestParser::parse() {
         parse_header(buffer.substr(0, header_end), delim);
         buffer = buffer.substr(header_end + delim.length() * 2);
         if (_state == ERROR) {
-            _status_code = 400;
+            status_code = 400;
             return;
         }
     }
