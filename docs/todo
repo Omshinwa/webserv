@@ -1,4 +1,8 @@
-i dont like this line
-* c->queue_response(build_response());
-
-refactor it, idea: have a Response() class that takes its text to parse as input?
+* make the parser uses the config's body size limit
+* check if the Request parser has everything the Config's needs to handle the request.
+* do stress tests (idk how, basically have tons of connexions to the server)
+* write the HTML pages:
+    * default errors pages
+* CGI
+* cookies
+* clean CTRL C

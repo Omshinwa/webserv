@@ -9,6 +9,7 @@
 #include <cstring>
 #include <iostream>
 #include <stdexcept>
+
 #include "../utils/Log.hpp"
 #include "../utils/Utils.hpp"
 
@@ -36,7 +37,7 @@ void Connexion::do_recv() {
     if (n > 0) {
         buf[n] = '\0';
         _recv_buf.append(buf, n);
-        log_event("<    file descriptor " + utils::to_str(fd) + " sent:");
+        log_event("<    RECEIVED file descriptor " + utils::to_str(fd) + ":");
         log_info(buf);
         request.parse();
     } else if (n == 0) {
@@ -53,11 +54,9 @@ void Connexion::do_recv() {
         case RequestParser::INCOMPLETE_BODY:
             break;
         case RequestParser::COMPLETE:
-            _state = CLOSING;
             queue_response();
             break;
         case RequestParser::ERROR:
-            _state = CLOSING;
             queue_response();
             break;
     }
@@ -73,12 +72,19 @@ ssize_t Connexion::do_send() {
 
     ssize_t n = send(fd, buf, left, 0);
     if (n > 0) {
-        _send_offset += n;
+        log_event(">    SENT to file descriptor " + utils::to_str(fd));
 
-        log_event(">    sent to file descriptor " + utils::to_str(fd));
-        log_info(buf);
-        // if (_send_offset >= _send_buf.size())
-        //     _state = CLOSING; // HTTP/1.0-style: close after response
+        if (n > 600)  // we only display up to 600 chars in the debug
+        {
+            log_info(_send_buf.substr(_send_offset, _send_offset + 600));
+            log_info("...");
+            log_info("...");
+        } else
+            log_info(buf);
+
+        _send_offset += n;  // update the offset buffer
+        if (_send_offset >= _send_buf.size())
+            _state = CLOSING;  // HTTP/1.0-style: close after response
     }
     return n;
 }

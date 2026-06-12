@@ -12,8 +12,9 @@ SRC			=	src/main.cpp					\
 				src/utils/Utils.cpp				\
 				src/server/Connexion.cpp		\
 				src/server/Server.cpp			\
+				src/server/signal.cpp			\
 				src/http/RequestParser.cpp		\
-				src/http/ResponseBuilder.cpp
+				src/http/ResponseBuilder.cpp	\
 
 OBJ			=	$(SRC:.cpp=.o)
 

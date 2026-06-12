@@ -29,7 +29,7 @@ std::string ResponseBuilder::build(RequestParser&) {
     std::string body = body_stream.str();
 
     std::ostringstream resp;
-    resp << "HTTP/1.1 200 OK\r\n"
+    resp << "HTTP/1.0 200 OK\r\n"
          << "Content-Type: text/html\r\n"
          << "Content-Length: " << body.size() << "\r\n"
          << "Connection: close\r\n"

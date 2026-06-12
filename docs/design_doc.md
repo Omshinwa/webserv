@@ -210,3 +210,5 @@ CGI — child process + pipe management
 stupid function writing (like std::cout << addr operator) or color convertor
 advices on architecture
 refactor (make fd a public attribute)
+
+

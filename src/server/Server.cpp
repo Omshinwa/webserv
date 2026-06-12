@@ -12,6 +12,7 @@
 #include "../utils/Log.hpp"
 #include "../utils/Utils.hpp"
 #include "Connexion.hpp"
+#include "signal.hpp"
 
 // Server::Server(const std::vector<ServerConfig>& configs) : _configs(configs) {}
 
@@ -19,11 +20,7 @@ std::ostream& operator<<(std::ostream& os, const sockaddr_in& addr);
 
 // create socket -> setsockopt -> nonblock -> bind -> listen
 Server::Server(const std::vector<ServerConfig>& configs)
-        : _fd(-1),
-          _port(configs[0].port),
-          _host(configs[0].host),
-          _configs(configs)
-{
+        : _fd(-1), _port(configs[0].port), _host(configs[0].host), _configs(configs) {
     // create the socket
     {
         _fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -88,13 +85,16 @@ Server::~Server() {
 // revents = the answer     → "yes readable / yes writable / hung up / error"
 void Server::run() {
     log_event("SERVER RUNNING");
-    while (true) {
+    while (!webserv::g_stop) {
         // poll will set all the revents to 0, then
         // poll will BLOCK the process until an event triggers it
-        int n = poll(&_pollfds[0], _pollfds.size(), -1);  // -1 = wait forever
+        int n = poll(&_pollfds[0], _pollfds.size(), -1);
         if (n < 0) {
-            if (errno == EINTR)  // signal interrupted, just retry
+            if (errno == EINTR)  // signal interrupted
+            {
+                log_error("SIGNAL INTERRUPT");
                 continue;
+            }
             log_error("poll error");
             throw std::runtime_error(std::strerror(errno));
         }
@@ -114,6 +114,7 @@ void Server::run() {
             if (c->state() == Connexion::CLOSING) drop_connexion(c);
         }
     }
+    log_event("SHUTTING DOWN");
 }
 
 //  ██████████ █████   █████ ██████████ ██████   █████ ███████████
@@ -163,14 +164,8 @@ void Server::handle_event(pollfd& pfd) {
     // 3. Writes
     if (pfd.revents & POLLOUT) {
         Connexion* c = _connexions[pfd.fd];
-        if (c->do_send() < 0) {
-            c->mark_closing();
-            return;
-        }
-        if (c->state() == Connexion::CLOSING) {
-            c->mark_closing();
-            return;
-        }
+        if (c->do_send() < 0) c->mark_closing();
+        if (c->state() == Connexion::CLOSING) return;
         // HTTP/1.1: response sent but keep-alive — flip back to reading
         pfd.events = POLLIN;
     }

@@ -123,3 +123,7 @@ Method names are case sensitive.[4]: §3 [18]: §9.1  This is in contras
 414 URI Too Long — request line (specifically the URI) exceeds the limit
 431 Request Header Fields Too Large — a header line or total headers exceed
 400 Bad Request — generic fallback
+
+## stress test
+
+siege -b http://127.0.0.1:8080/
