@@ -28,7 +28,7 @@ class ResponseBuilder {
     // methods
 
     void find_location(RequestParser& req, const ServerConfig& config);
-    void check_methods(RequestParser& req, const ServerConfig& config);
+    void check_methods(RequestParser& req);
     void handle_method(RequestParser& req, const ServerConfig& config);
     void handle_get(RequestParser& req, const ServerConfig& config);
     void handle_post(RequestParser& req, const ServerConfig& config);

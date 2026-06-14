@@ -90,10 +90,12 @@ ResponseBuilder::ResponseBuilder(RequestParser& req, const ServerConfig& config)
 
     find_location(req, config);
     if (status_code >= 400) return;
-    check_methods(req, config);
+    check_methods(req);
     if (status_code >= 400) return;
     handle_method(req, config);  // GET / POST / DELETE dispatch
 }
+
+ResponseBuilder::~ResponseBuilder() {}
 
 void ResponseBuilder::find_location(RequestParser& req, const ServerConfig& config) {
     // find the matching location:
@@ -115,7 +117,7 @@ void ResponseBuilder::find_location(RequestParser& req, const ServerConfig& conf
     location = best;
 }
 
-void ResponseBuilder::check_methods(RequestParser& req, const ServerConfig& config) {
+void ResponseBuilder::check_methods(RequestParser& req) {
     // find the matching method:
     std::vector<std::string>::const_iterator it;
     for (it = location->methods.begin(); it != location->methods.end(); ++it) {
@@ -153,12 +155,15 @@ void ResponseBuilder::handle_get(RequestParser& res, const ServerConfig& config)
         Log::error(e.what());
         Log::error(std::strerror(errno));
     }
+
+    (void)res;
+    (void)config;
 }
-void handle_post(RequestParser&, const ServerConfig&) {
+void ResponseBuilder::handle_post(RequestParser&, const ServerConfig&) {
     // upload_dir
     // TODO
 }
-void handle_delete(RequestParser&, const ServerConfig&) {
+void ResponseBuilder::handle_delete(RequestParser&, const ServerConfig&) {
     // TODO
 }
 
