@@ -3,28 +3,38 @@
 
 #include <map>
 #include <string>
+
+#include "../config/Config.hpp"
+
 typedef std::map<std::string, std::string> t_dict;
 
 class RequestParser {
     public:
-    enum State { INCOMPLETE_HEADER, INCOMPLETE_BODY, COMPLETE, ERROR };
+    enum State { INCOMPLETE_HEADER, AWAITING_CONFIG, INCOMPLETE_BODY, COMPLETE, ERROR };
 
     RequestParser(std::string&);
     ~RequestParser();
 
-    t_dict header;
-
     void parse();
-    inline State state() const { return _state; };
+    inline State get_state() const { return state; };
+
+    // Called while in AWAITING_CONFIG: the Connexion resolves the virtual host
+    // once the header is parsed and hands us the matching config. This drives
+    // the transition to COMPLETE (no body) or INCOMPLETE_BODY (after the 413
+    // body-size check).
+    void set_config(const ServerConfig& cfg);
+    std::string get_header(std::string s) const;
+    inline int get_status_code() const { return status_code; };
 
     private:
-    enum IncompleteState { HEADER, BODY };
-
     static const size_t MAX_HEADER_SIZE = 32000;
 
-    State _state;
-
+    State state;
+    t_dict header;
     int status_code;
+
+    // Resolved by the Connexion from the Host header; NULL until then.
+    const ServerConfig* config;
 
     //
     std::string method;
@@ -39,7 +49,6 @@ class RequestParser {
     size_t scan_pos;  // we scan the buffer until we find \r\n\r\n
 
     void parse_header(std::string header_data, std::string delim);
-    void parse_content_range();
     void parse_start_line(std::string line);
     void parse_header_line(std::string line);
 

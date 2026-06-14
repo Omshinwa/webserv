@@ -178,7 +178,7 @@ void Server::accept_new_connexion() {
     try {
         int connexion_fd = accept(_fd, NULL, NULL);
         if (connexion_fd < 0) throw std::runtime_error(std::strerror(errno));
-        c = new Connexion(connexion_fd);
+        c = new Connexion(connexion_fd, _configs);
         log_event("NEW Client Socket FD: " + utils::to_str(c->fd));
     } catch (const std::exception& e) {
         log_error(std::string("accept error: ") + e.what());

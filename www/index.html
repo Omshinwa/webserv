@@ -115,13 +115,13 @@
             const responseText = document.getElementById('response-text');
 
             // 1. Health check
-            fetch('/')
-                .then(res => {
-                    if (res.ok) statusEl.textContent = 'Online ✅';
-                })
-                .catch(() => {
-                    statusEl.textContent = 'Online ✅ (Serving Static)';
-                });
+            // fetch('/')
+            //     .then(res => {
+            //         if (res.ok) statusEl.textContent = 'Online ✅';
+            //     })
+            //     .catch(() => {
+            //         statusEl.textContent = 'Online ✅ (Serving Static)';
+            //     });
 
             // 2. Handle DELETE Request
             deleteBtn.addEventListener('click', async () => {

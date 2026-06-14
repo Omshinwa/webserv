@@ -5,7 +5,9 @@
 #include <sys/types.h>
 
 #include <string>
+#include <vector>
 
+#include "../config/Config.hpp"
 #include "../http/RequestParser.hpp"
 #include "../http/ResponseBuilder.hpp"
 
@@ -19,7 +21,9 @@ class Connexion {
 
     const int fd;
 
-    explicit Connexion(int listen_fd);  // does accept(); throws on failure
+    // configs: all server blocks sharing this listening socket; used to
+    // resolve the virtual host once the request's Host header is known.
+    Connexion(int listen_fd, const std::vector<ServerConfig>& configs);
     ~Connexion();
 
     State state() const;
@@ -44,6 +48,13 @@ class Connexion {
     size_t _send_offset;
 
     RequestParser request;
+
+    const std::vector<ServerConfig>& _configs;
+    const ServerConfig* _active;  // resolved virtual host, NULL until header parsed
+
+    // Pick the server block whose server_names matches the Host header,
+    // falling back to the first (default) server for this socket.
+    const ServerConfig& resolve_virtual_host(const std::string& host) const;
 
     // LOG
 

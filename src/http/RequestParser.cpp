@@ -9,10 +9,34 @@
 #include "../utils/Utils.hpp"
 #include "ResponseBuilder.hpp"
 
+namespace {
+// Just checking that its a valid positive number
+bool parse_size_t(const char* s, size_t& output) {
+    char* end;
+    errno = 0;
+    long cl = std::strtol(s, &end, 10);
+
+    if (end == s
+        // no digits at all ("", "abc")
+        || *end != '\0'     // trailing garbage ("123abc", "12 34")
+        || errno == ERANGE  // overflow (number too big for long)
+        || cl < 0) {        // negative ("-5")
+        return false;
+    }
+    output = static_cast<size_t>(cl);
+    return true;
+}
+}  // namespace
+
 // The parser shares the buffer with Connexion
 
 RequestParser::RequestParser(std::string& buffer)
-        : state(INCOMPLETE_HEADER), status_code(0), buffer(buffer), scan_pos(0) {
+        : state(INCOMPLETE_HEADER),
+          status_code(0),
+          config(NULL),
+          content_length(0),
+          buffer(buffer),
+          scan_pos(0) {
     Log::debug("Request Parser Creation");
 }
 
@@ -26,32 +50,29 @@ void RequestParser::parse_start_line(std::string line) {
 
     items = utils::split(line, " ");
     if (items.size() != 3) {
-        _state = ERROR;
+        state = ERROR;
         Log::error("Start line error: " + line);
         return;
     }
     method = items[0];
     URI = items[1];
     protocol = items[2];
-    // Log::event("PARSE OBJECT:");
-    // Log::info("method: " + method);
-    // Log::info("URI: " + URI);
-    // Log::info("protocol: " + protocol);
 }
 
+// parse a single line
 void RequestParser::parse_header_line(std::string line) {
     std::string key, value;
 
     size_t colon_pos = line.find(':');
     if (colon_pos == std::string::npos) {
-        _state = ERROR;
+        state = ERROR;
         return;
     }
     key = line.substr(0, colon_pos);
     value = line.substr(colon_pos + 1);
     // if theres a space in the key = ERROR
     if (key.find_first_of(" ") != std::string::npos) {
-        _state = ERROR;
+        state = ERROR;
         return;
     }
 
@@ -59,23 +80,6 @@ void RequestParser::parse_header_line(std::string line) {
     value = utils::trim(value);
     header[key] = value;
     // Log::info(key + " : " + value);
-}
-
-// Just checking that its a valid positive number
-void RequestParser::parse_content_range() {
-    char* end;
-    long cl = std::strtol(header["content-length"].c_str(), &end, 10);
-
-    errno = 0;
-    if (end == header["content-length"].c_str()
-        // no digits at all ("", "abc")
-        || *end != '\0'     // trailing garbage ("123abc", "12 34")
-        || errno == ERANGE  // overflow (number too big for long)
-        || cl < 0) {        // negative ("-5")
-        _state = ERROR;
-        return;
-    }
-    content_length = static_cast<size_t>(cl);
 }
 
 // Only call it when we have the full header in buffer
@@ -88,46 +92,50 @@ void RequestParser::parse_header(std::string header_data, std::string delim) {
             parse_start_line(*it);
         else
             parse_header_line(*it);
-        if (_state == ERROR) {
+        if (state == ERROR) {
             Log::error("ERROR parsing header on: " + *it);
-            break;
+            return;
         }
     }
 
     if (header.find("host") == header.end()) {
         Log::error("Header error: no host key");
-        _state = ERROR;
+        state = ERROR;
         return;
     }
 
-    // if theres no content-length key, we have the full request
+    // Parse Content-Length now if present, but defer the COMPLETE vs
+    // INCOMPLETE_BODY decision to set_config(): we need the resolved config for
+    // the body-size (413) check first. Either way the header is done, so we
+    // hand off to the Connexion via AWAITING_CONFIG.
     if (header.find("content-length") == header.end()) {
         Log::info("No content length!");
-        _state = COMPLETE;
     } else {
         Log::info("Content length: " + header["content-length"]);
-        _state = INCOMPLETE_BODY;
-        parse_content_range();
+        if (!parse_size_t(header["content-length"].c_str(), content_length)) {
+            state = ERROR;
+            return;
+        }
     }
+    state = AWAITING_CONFIG;
 
     Log::event("HEADER OK");
 }
 
 void RequestParser::parse() {
-    if (_state == INCOMPLETE_HEADER) {
+    if (state == INCOMPLETE_HEADER) {
         size_t header_end = std::string::npos;
 
         std::string delim = "";
-        // we will successively try \r\n\r\n then \n\n and set
-        // DELIM to that one
+        // we will try `\r\n\r\n` then `\n\n`
+        // DELIM will take that value
 
         // Check for standard \r\n\r\n first
         size_t pos_crlf = buffer.find("\r\n\r\n", scan_pos);
         // Check for tolerant \n\n
         size_t pos_lf = buffer.find("\n\n", scan_pos);
 
-        if (pos_crlf != std::string::npos &&
-            (pos_lf == std::string::npos || pos_crlf < pos_lf)) {
+        if (pos_crlf != std::string::npos && pos_crlf < pos_lf) {
             header_end = pos_crlf;
             delim = "\r\n";
         } else if (pos_lf != std::string::npos) {
@@ -141,22 +149,55 @@ void RequestParser::parse() {
                 // scan_pos = length we read (minus 4, in case \r\n\r\n was
                 // given cut)
                 scan_pos = buffer.length() - 4;
-                if (buffer.size() > MAX_HEADER_SIZE) _state = ERROR;
+                if (buffer.size() > MAX_HEADER_SIZE) {
+                    state = ERROR;
+                    status_code = 431;
+                }
             }
             return;
         }
 
         parse_header(buffer.substr(0, header_end), delim);
-        buffer = buffer.substr(header_end + delim.length() * 2);
-        if (_state == ERROR) {
+        if (state == ERROR) {
             status_code = 400;
             return;
         }
+        buffer = buffer.substr(header_end + delim.length() * 2);
     }
-    if (_state == INCOMPLETE_BODY) {
+    if (state == INCOMPLETE_BODY) {
+        // We only reach INCOMPLETE_BODY after set_config() ran the 413 check,
+        // so the body-size limit has already been enforced here.
         if (buffer.size() < content_length) return;
 
         body = buffer.substr(0, content_length);
-        _state = COMPLETE;
+        state = COMPLETE;
     }
+}
+
+// Called by the Connexion with the virtual host it resolved from get_host().
+// This is where we know client_max_body_size, so the 413 check lives here.
+void RequestParser::set_config(const ServerConfig& cfg) {
+    config = &cfg;
+    if (state != AWAITING_CONFIG) return;
+
+    // No Content-Length means no body, so the request is already complete.
+    if (header.find("content-length") == header.end()) {
+        state = COMPLETE;
+        return;
+    }
+    if (content_length > cfg.client_max_body_size) {
+        state = ERROR;
+        status_code = 413;
+        Log::error("Body size " + utils::to_str(content_length) +
+                   " exceeds client_max_body_size " +
+                   utils::to_str(cfg.client_max_body_size));
+        return;
+    }
+    state = INCOMPLETE_BODY;
+}
+
+std::string RequestParser::get_header(std::string key) const {
+    t_dict::const_iterator it = header.find(key);
+    if (it == header.end()) return "";
+    return it->second;
 }

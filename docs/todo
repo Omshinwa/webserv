@@ -1,3 +1,4 @@
+# BIG TODO
 * make the parser uses the config's body size limit
 * check if the Request parser has everything the Config's needs to handle the request.
 * do stress tests (idk how, basically have tons of connexions to the server)
@@ -5,3 +6,35 @@
     * default errors pages
 * CGI
 * cookies
+
+# today
+
+* Pass the ServerConfig vector to Connexion
+
+// after parse_header, before/within the INCOMPLETE_BODY handling
+const ServerConfig& sc = resolve_virtual_host(header["host"]);  // match server_names, fallback to _configs[0]
+if (content_length > sc.client_max_body_size) {
+    _state = ERROR;
+    status_code = 413;   // Content Too Large
+    return;
+}
+
+
+when is the const
+    const ServerConfig* _config;
+set in RequestParser
+
+
+        // Once the header is parsed the Host is known, so we can resolve the
+        // virtual host and hand the config to the parser (triggers the 413
+        // body-size check). Then re-parse to consume the body if it's present.
+        if (_active == NULL && request.state() != RequestParser::INCOMPLETE_HEADER
+            && request.state() != RequestParser::ERROR) {
+            _active = &resolve_virtual_host(request.get_host());
+            request.set_config(*_active);
+            request.parse();
+        }
+
+
+Do i need to pass the ServerConfig to the ResponseBuilder?
+Cant i just pass RequestParser which has a reference to the correct ServerConfig ?
