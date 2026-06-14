@@ -29,7 +29,6 @@ bool parse_size_t(const char* s, size_t& output) {
 }  // namespace
 
 // The parser shares the buffer with Connexion
-
 RequestParser::RequestParser(std::string& buffer)
         : state(INCOMPLETE_HEADER),
           status_code(0),
@@ -44,7 +43,8 @@ RequestParser::~RequestParser() { Log::debug("Request Parser Destructor"); }
 
 ///
 
-// "GET / HTTP/1.1"
+// parse the first line of a header:
+// "GET / HTTP/1.0"
 void RequestParser::parse_start_line(std::string line) {
     std::vector<std::string> items;
 
@@ -79,7 +79,6 @@ void RequestParser::parse_header_line(std::string line) {
     key = utils::to_lower(key);
     value = utils::trim(value);
     header[key] = value;
-    // Log::info(key + " : " + value);
 }
 
 // Only call it when we have the full header in buffer
@@ -104,10 +103,7 @@ void RequestParser::parse_header(std::string header_data, std::string delim) {
         return;
     }
 
-    // Parse Content-Length now if present, but defer the COMPLETE vs
-    // INCOMPLETE_BODY decision to set_config(): we need the resolved config for
-    // the body-size (413) check first. Either way the header is done, so we
-    // hand off to the Connexion via AWAITING_CONFIG.
+    // Parse Content-Length now if present
     if (header.find("content-length") == header.end()) {
         Log::info("No content length!");
     } else {
@@ -117,8 +113,8 @@ void RequestParser::parse_header(std::string header_data, std::string delim) {
             return;
         }
     }
-    state = AWAITING_CONFIG;
 
+    state = AWAITING_CONFIG;
     Log::event("HEADER OK");
 }
 
@@ -165,8 +161,6 @@ void RequestParser::parse() {
         buffer = buffer.substr(header_end + delim.length() * 2);
     }
     if (state == INCOMPLETE_BODY) {
-        // We only reach INCOMPLETE_BODY after set_config() ran the 413 check,
-        // so the body-size limit has already been enforced here.
         if (buffer.size() < content_length) return;
 
         body = buffer.substr(0, content_length);
@@ -181,6 +175,7 @@ void RequestParser::set_config(const ServerConfig& cfg) {
     if (state != AWAITING_CONFIG) return;
 
     // No Content-Length means no body, so the request is already complete.
+    // only true in HTTP 1.0, otherwise chunks
     if (header.find("content-length") == header.end()) {
         state = COMPLETE;
         return;
