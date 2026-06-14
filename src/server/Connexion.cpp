@@ -111,7 +111,8 @@ void Connexion::queue_response() {
     // _active may be NULL if we errored before parsing the Host header (e.g. a
     // 400 on a malformed header); fall back to the default server block.
     const ServerConfig& config = _active ? *_active : _configs[0];
-    _send_buf = ResponseBuilder::build(request, config);
+    ResponseBuilder response(request, config);
+    _send_buf = response.build();
     _send_offset = 0;
     _state = WRITING;
 }

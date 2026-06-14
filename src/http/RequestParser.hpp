@@ -26,6 +26,15 @@ class RequestParser {
     std::string get_header(std::string s) const;
     inline int get_status_code() const { return status_code; };
 
+    std::string method;
+    std::string URI;
+    std::string protocol;
+    std::string body;
+
+    //
+    // // PRIVATE
+    //
+
     private:
     static const size_t MAX_HEADER_SIZE = 32000;
 
@@ -37,12 +46,8 @@ class RequestParser {
     const ServerConfig* config;
 
     //
-    std::string method;
-    std::string URI;
-    std::string protocol;
-    std::string body;
 
-    size_t content_length;
+    size_t content_length;  // parsed content length
 
     // A bunch of internal variables used to represent a request
     std::string& buffer;

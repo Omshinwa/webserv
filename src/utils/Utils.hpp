@@ -10,6 +10,7 @@ namespace utils {
     // string manipulation
     std::string trim(const std::string& s);
     std::string to_lower(std::string s);
+    std::string capitalize_header(std::string s);
 
     std::vector<std::string>    split(const std::string& s, const std::string& delim);
     std::vector<std::string>    split_any(const std::string& s, const std::string& chars);

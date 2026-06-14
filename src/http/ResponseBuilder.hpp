@@ -5,19 +5,34 @@
 #include "RequestParser.hpp"
 
 // Status-Line = HTTP-Version SP Status-Code SP Reason-Phrase CRLF
-// 
+//
 class ResponseBuilder {
     public:
-    // ResponseBuilder(RequestParser &);
-    // ~ResponseBuilder();
+    ResponseBuilder(RequestParser&, const ServerConfig&);
+    ~ResponseBuilder();
 
-    static std::string build(RequestParser&, const ServerConfig&);
-    t_dict header;
+    std::string build();
+
+    //
+    // // private
+    //
 
     private:
     std::string protocol;
     int status_code;
-    std::string reason_phrase;
+    t_dict header;
+    std::string body;
+
+    const LocationConfig* location;
+
+    // methods
+
+    void find_location(RequestParser& req, const ServerConfig& config);
+    void check_methods(RequestParser& req, const ServerConfig& config);
+    void handle_method(RequestParser& req, const ServerConfig& config);
+    void handle_get(RequestParser& req, const ServerConfig& config);
+    void handle_post(RequestParser& req, const ServerConfig& config);
+    void handle_delete(RequestParser& req, const ServerConfig& config);
 
     // INACCESSIBLE
     ResponseBuilder();

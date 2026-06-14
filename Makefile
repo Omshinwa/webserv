@@ -10,6 +10,7 @@ SRC			=	src/main.cpp					\
 				src/config/Config.cpp			\
 				src/utils/Log.cpp				\
 				src/utils/Utils.cpp				\
+				src/utils/Utils_str.cpp			\
 				src/server/Connexion.cpp		\
 				src/server/Server.cpp			\
 				src/server/signal.cpp			\
