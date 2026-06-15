@@ -51,6 +51,25 @@ bool parse_size(const std::string& s, size_t& out) {
     return true;
 }
 
+// parse a single line in a http header
+// from "Content-Length: 50"
+// -> header[content-length] = 50
+bool parse_http_header_line(const std::string& line, std::string& key,
+                            std::string& value) {
+    // std::string key, value;
+
+    size_t colon_pos = line.find(':');
+    if (colon_pos == std::string::npos) return false;
+    key = line.substr(0, colon_pos);
+    value = line.substr(colon_pos + 1);
+    // if theres a space in the key = ERROR
+    if (key.find_first_of(" ") != std::string::npos) return false;
+
+    key = utils::to_lower(key);
+    value = utils::trim(value);
+    return true;
+}
+
 }  // namespace utils
 
 // FILES

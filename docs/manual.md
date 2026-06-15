@@ -124,6 +124,19 @@ Method names are case sensitive.[4]: §3 [18]: §9.1  This is in contras
 431 Request Header Fields Too Large — a header line or total headers exceed
 400 Bad Request — generic fallback
 
+# CGI
+
+The CGI produces a *CGI response*: a small set of headers, a blank line, then the body.
+
+
+Content-Type: text/html        <- CGI headers (script writes these)
+                               <- blank line (\r\n)
+<html>...</html>               <- body
+
+There's no status line, no Content-Length etc. Th
+
+# TESTS
+
 ## stress test
 
 siege -b http://127.0.0.1:8080/

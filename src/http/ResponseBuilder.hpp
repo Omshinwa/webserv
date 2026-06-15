@@ -33,6 +33,8 @@ class ResponseBuilder {
     void handle_get(RequestParser& req, const ServerConfig& config);
     void handle_post(RequestParser& req, const ServerConfig& config);
     void handle_delete(RequestParser& req, const ServerConfig& config);
+    //
+    void parse_cgi_response(std::string cgi_response);
 
     // INACCESSIBLE
     ResponseBuilder();

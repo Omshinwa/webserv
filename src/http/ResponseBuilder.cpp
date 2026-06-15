@@ -7,6 +7,7 @@
 
 #include "../utils/Log.hpp"
 #include "../utils/Utils.hpp"
+#include "CgiProcess.hpp"
 
 namespace {
 std::string reason_phrase(int status_code) {
@@ -51,7 +52,8 @@ std::string reason_phrase(int status_code) {
             return "URI Too Long";
         case 415:
             return "Unsupported Media Type";
-        // case 431: return "Request Header Fields Too Large";
+        case 431:
+            return "Request Header Fields Too Large";
         // 5xx Server Error
         case 500:
             return "Internal Server Error";
@@ -129,8 +131,11 @@ void ResponseBuilder::check_methods(RequestParser& req) {
 
 void ResponseBuilder::handle_method(RequestParser& req, const ServerConfig& config) {
     if (req.method == "GET")
-        handle_get(req, config);
-    else if (req.method == "POST")
+    // handle_get(req, config);
+    {
+        CgiProcess cgi(req, config);
+        parse_cgi_response(cgi.output);
+    } else if (req.method == "POST")
         handle_post(req, config);
     else if (req.method == "DELETE")
         handle_delete(req, config);
@@ -144,6 +149,7 @@ void ResponseBuilder::handle_get(RequestParser& res, const ServerConfig& config)
     // check for root + URI request
     // is it a directory? if so -> index
     // no index? do autoindex
+    // is it a file? if so, is it a cgi?
 
     // if error -> check if config has error pages and that files reads OK
     // serve it
@@ -171,9 +177,52 @@ void ResponseBuilder::handle_delete(RequestParser&, const ServerConfig&) {
     // TODO
 }
 
+// BORING FUNCTION TO PARSE THE CGI RESPONSE LIKE WE DID FOR THE REQUEST
+void ResponseBuilder::parse_cgi_response(std::string raw) {
+    // 1. find the header/body separator (tolerant, like you already do)
+    size_t sep = raw.find("\r\n\r\n");
+    std::string delim = "\r\n";
+    if (sep == std::string::npos) {
+        sep = raw.find("\n\n");
+        delim = "\n";
+    }
+    // malformed: no blank line
+    if (sep == std::string::npos) {
+        status_code = 502;
+        return;
+    }
+
+    // 2. split header block into the map (shared helper)
+    std::vector<std::string> lines = utils::split(raw.substr(0, sep), delim);
+
+    for (size_t i = 0; i < lines.size(); ++i) {
+        std::string k, v;
+        if (utils::parse_http_header_line(lines[i], k, v)) header[k] = v;
+    }
+
+    // 3. body is just the rest
+    body = raw.substr(sep + delim.size() * 2);
+    header["content-length"] = utils::to_str(body.size());
+
+    // 4. CGI-specific: honor "Status:" header -> response code
+    status_code = 200;
+    if (header.count("status")) {
+        // usually a cgi response is something like `Status: 404 Not Found`,
+        // we ignore the reason phrase
+        const std::string& s = header["status"];
+        std::string code_str = s.substr(0, s.find(' '));  // "404 Not Found" -> "404"
+        if (!utils::parse_int(code_str, status_code)) status_code = 502;
+        header.erase("status");  // <-- see Bug 2
+    }
+
+    // optionally: handle Location of the CGI
+}
+
 // build the HTTP message
 std::string ResponseBuilder::build() {
-    if (status_code >= 400) {
+    if (status_code >= 400 && body.empty()) {
+        // if the body is empty, we fill it.
+        // its possible its not empty because of CGI.
         std::ostringstream oss;
         oss << "<html><head><title>" << status_code << " " << reason_phrase(status_code)
             << "</title></head><body><center><h1>" << status_code << " "

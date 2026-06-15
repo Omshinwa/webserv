@@ -28,7 +28,7 @@ Server::Server(const std::vector<ServerConfig>& configs)
             Log::error("Server socket error");
             throw std::runtime_error(std::strerror(errno));
         }
-        log_event("NEW Server Socket FD: ");
+        log_event("NEW Server Socket FD: " + utils::to_str(_fd));
 
         int opt = 1;  // Allows to restart without TIME_WAIT
         setsockopt(_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
