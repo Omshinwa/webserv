@@ -145,6 +145,10 @@ void ResponseBuilder::handle_get(RequestParser& res, const ServerConfig& config)
     // is it a directory? if so -> index
     // no index? do autoindex
 
+    // if error -> check if config has error pages and that files reads OK
+    // serve it
+    // otherwise use the default generated
+
     const std::string filepath = "./www/index.html";
 
     try {
@@ -171,7 +175,10 @@ void ResponseBuilder::handle_delete(RequestParser&, const ServerConfig&) {
 std::string ResponseBuilder::build() {
     if (status_code >= 400) {
         std::ostringstream oss;
-        oss << "<h1>" << utils::to_str(status_code) << "</h1>";
+        oss << "<html><head><title>" << status_code << " " << reason_phrase(status_code)
+            << "</title></head><body><center><h1>" << status_code << " "
+            << reason_phrase(status_code)
+            << "</h1></center><hr><center>webserv</center></body></html>";
         body = oss.str();
         header["content-type"] = "text/html";
         header["content-length"] = utils::to_str(body.size());
