@@ -6,6 +6,11 @@
 #include "utils/Log.hpp"
 
 int main(int ac, char** av) {
+    if (ac > 2) {
+        std::cerr << "Usage: " << av[0] << " [config_file]" << std::endl;
+        return 1;
+    }
+
     try {
         std::string path = (ac == 2) ? av[1] : "configs/default.conf";
         std::vector<ServerConfig> configs = Config::parse(path);
