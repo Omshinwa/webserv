@@ -8,7 +8,7 @@
 
 class CgiProcess {
     public:
-    CgiProcess(RequestParser& res, const ServerConfig& config);
+    CgiProcess(RequestParser& res, std::string file);
     std::string output;
 
     //

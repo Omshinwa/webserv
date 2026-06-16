@@ -133,7 +133,11 @@ Content-Type: text/html        <- CGI headers (script writes these)
                                <- blank line (\r\n)
 <html>...</html>               <- body
 
-There's no status line, no Content-Length etc. Th
+There's no status line, no Content-Length etc.
+
+The authoritative spec is RFC 3875 — "The Common Gateway Interface (CGI) Version 1.1": https://datatracker.ietf.org/doc/html/rfc3875
+
+That's the document to cite. The environment variables are in §4.1 and the meta-variable rules in §4. A few other useful references:
 
 # TESTS
 

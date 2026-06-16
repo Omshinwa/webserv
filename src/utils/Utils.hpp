@@ -10,7 +10,6 @@ namespace utils {
 // string manipulation
 std::string trim(const std::string& s);
 std::string to_lower(std::string s);
-std::string capitalize_header(std::string s);
 
 std::vector<std::string> split(const std::string& s, const std::string& delim);
 std::vector<std::string> split_any(const std::string& s, const std::string& chars);
@@ -24,6 +23,10 @@ std::string to_str(T v) {
     oss << v;
     return oss.str();
 }
+
+// specialized
+
+std::string capitalize_header(std::string s);
 
 // numeric parsing - returns false on failure
 bool parse_int(const std::string& s, int& out);

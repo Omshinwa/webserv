@@ -133,7 +133,8 @@ void ResponseBuilder::handle_method(RequestParser& req, const ServerConfig& conf
     if (req.method == "GET")
     // handle_get(req, config);
     {
-        CgiProcess cgi(req, config);
+        CgiProcess cgi(req, "test.py");
+        // CgiProcess cgi(req, "cgi_tester");
         parse_cgi_response(cgi.output);
     } else if (req.method == "POST")
         handle_post(req, config);

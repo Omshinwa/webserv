@@ -18,12 +18,12 @@ class RequestParser {
     void parse();
     inline State get_state() const { return state; };
 
-    // Called while in AWAITING_CONFIG: the Connexion resolves the virtual host
-    // once the header is parsed and hands us the matching config. This drives
-    // the transition to COMPLETE (no body) or INCOMPLETE_BODY (after the 413
-    // body-size check).
     void set_config(const ServerConfig& cfg);
     std::string get_header(std::string s) const;
+    const t_dict& get_header_ref() const {
+        return header;
+    }  // cpp why do you force me to do this
+
     inline int get_status_code() const { return status_code; };
 
     std::string method;
