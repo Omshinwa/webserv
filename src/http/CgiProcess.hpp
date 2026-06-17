@@ -11,9 +11,9 @@
 class CgiProcess {
     public:
     CgiProcess(RequestParser& res, const ServerConfig& config,
-               const std::string& interpreter);
+               const std::string& interpreter, const std::string& script_path);
     std::string output;
-    int status_code;
+    int exec_status;
 
     //
     // // private

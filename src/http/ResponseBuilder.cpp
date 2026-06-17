@@ -205,9 +205,9 @@ void ResponseBuilder::handle_get(RequestParser& req, const ServerConfig& config)
     // CGI: does this file's extension map to a configured handler?
     const std::string* interpreter = match_cgi(filepath);
     if (interpreter != NULL) {
-        CgiProcess cgi(req, config, *interpreter);
-        if (cgi.status_code >= 400)
-            status_code = cgi.status_code;
+        CgiProcess cgi(req, config, *interpreter, filepath);
+        if (cgi.exec_status >= 400)
+            status_code = cgi.exec_status;
         else
             parse_cgi_response(cgi.output);
         return;
