@@ -16,6 +16,7 @@ SRC			=	src/main.cpp					\
 				src/server/signal.cpp			\
 				src/http/RequestParser.cpp		\
 				src/http/ResponseBuilder.cpp	\
+				src/http/CgiProcess.cpp			\
 
 OBJ			=	$(SRC:.cpp=.o)
 

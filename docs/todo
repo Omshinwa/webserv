@@ -1,12 +1,27 @@
 # BIG TODO
-* make the parser uses the config's body size limit
-* check if the Request parser has everything the Config's needs to handle the request.
-* do stress tests (idk how, basically have tons of connexions to the server)
-* write the HTML pages:
-    * default errors pages
-* CGI
 * cookies
 
-# today
+# CGI
+* config will eventually need to have map of extension -> interpreter
+location /cgi-bin/ {
+    methods GET POST;
+    root ./www;
+    cgi .py /usr/bin/python3;
+    cgi .php /usr/bin/php-cgi;
+}
 
-* response builder build something depending on the status code
+* how do you execute a cgi outside?
+* handle all the vars of CGI
+* add CGI stuff to poll() * the fd will need to sit in the poll(), also Connexion needs to have a cgi_pid ? idk
+* 1.1 HTTP? chunked 
+
+
+
+# checks to do when we're done
+
+* config's body size limit is exceeded
+* do stress tests (idk how, basically have tons of connexions to the server)
+* timeout the cgi if it's too long
+* tests all the errors, 431 etc
+
+http://localhost:8080/cgi-bin/cgi_tester

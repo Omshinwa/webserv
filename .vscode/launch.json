@@ -15,7 +15,32 @@
             "linux": {
                 "MIMode": "gdb",
                 "miDebuggerPath": "/usr/bin/gdb"
-            }
+            },
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    // a std::string shows as "hello" instead of its internal 
+                    // _M_dataplus struct, a std::vector shows its elements, 
+                    // a std::map shows key/value pairs, etc.
+                    "ignoreFailures": true
+                },
+                // // Below allows to debug child processes:
+                // //
+                // cmd to switch context:
+                // info inferiors
+                // inferior 1
+                // inferior 2
+                // config to uncomment for this to work:
+                // {
+                //     "description": "Follow child after fork",
+                //     "text": "set follow-fork-mode child"
+                // },
+                // {
+                //     "description": "Keep parent attached",
+                //     "text": "set detach-on-fork off"
+                // },
+            ],
         }
     ]
 }

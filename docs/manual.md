@@ -124,6 +124,36 @@ Method names are case sensitive.[4]: §3 [18]: §9.1  This is in contras
 431 Request Header Fields Too Large — a header line or total headers exceed
 400 Bad Request — generic fallback
 
+# CGI
+
+The CGI produces a *CGI response*: a small set of headers, a blank line, then the body.
+
+
+Content-Type: text/html        <- CGI headers (script writes these)
+                               <- blank line (\r\n)
+<html>...</html>               <- body
+
+There's no status line, no Content-Length etc.
+
+The authoritative spec is RFC 3875 — "The Common Gateway Interface (CGI) Version 1.1": https://datatracker.ietf.org/doc/html/rfc3875
+
+That's the document to cite. The environment variables are in §4.1 and the meta-variable rules in §4. A few other useful references:
+
+# TESTS
+
 ## stress test
 
 siege -b http://127.0.0.1:8080/
+
+
+http://localhost/profile/upload_avatar.py
+
+
+    location /profile {
+        methods GET POST;
+        root    www/cgi-bin/
+    }
+
+www/profile/upload_avatar.py
+
+www/cgi-bin/upload_avatar.py
