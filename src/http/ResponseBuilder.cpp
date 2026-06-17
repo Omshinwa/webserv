@@ -74,8 +74,9 @@ std::string reason_phrase(int status_code) {
 
 bool path_matches(const std::string& uri, const std::string& path) {
     if (!utils::starts_with(uri, path)) return false;
-    // exact match, or the next char is a '/' (real segment boundary)
-    return uri.size() == path.size() || uri[path.size()] == '/';
+    if (uri.size() == path.size()) return true;     // exact match
+    if (path[path.size() - 1] == '/') return true;  // path already ends at a separator
+    return uri[path.size()] == '/';                 // real segment boundary
 }
 }  // namespace
 
@@ -115,7 +116,11 @@ void ResponseBuilder::find_location(RequestParser& req, const ServerConfig& conf
         }
     }
     // couldnt find the location
-    if (best == NULL) status_code = 404;
+    if (best == NULL) {
+        Log::error("Couldnt find the page, 404");
+        status_code = 404;
+    }
+
     location = best;
 }
 
@@ -133,7 +138,7 @@ void ResponseBuilder::handle_method(RequestParser& req, const ServerConfig& conf
     if (req.method == "GET")
     // handle_get(req, config);
     {
-        CgiProcess cgi(req, "test.py");
+        CgiProcess cgi(req, "python.py");
         // CgiProcess cgi(req, "cgi_tester");
         parse_cgi_response(cgi.output);
     } else if (req.method == "POST")

@@ -21,5 +21,7 @@ location /cgi-bin/ {
 * timeout the cgi if it's too long
 * tests all the errors, 431 etc
 * 1.1 HTTP? chunked 
+* handle all the vars of CGI
+* add CGI stuff to poll()
 
 http://localhost:8080/cgi-bin/cgi_tester

@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <iostream>
 #include <map>
 #include <vector>
 
@@ -29,7 +30,7 @@ std::string httpheader_to_envvar_format(std::string header) {
     return "HTTP_" + header;
 }
 
-// also builds the env char**
+// this builds the env char**
 void child_execve(RequestParser& req, std::string file) {
     // this block setups the envs
     std::vector<std::string> strings;
@@ -45,9 +46,11 @@ void child_execve(RequestParser& req, std::string file) {
             strings.push_back("QUERY_STRING=");
         strings.push_back("SERVER_PROTOCOL=HTTP/1.0");
         strings.push_back("GATEWAY_INTERFACE=CGI/1.1");
-        strings.push_back("SCRIPT_NAME=" + req.URI);
+        // NOTE: the 42 cgi_tester binary returns 500 "PATH_INFO incorrect"
+        // whenever SCRIPT_NAME is non-empty, so we leave it empty here.
+        strings.push_back("SCRIPT_NAME=");
         strings.push_back("PATH_INFO=" + req.URI);
-        // strings.push_back("SCRIPT_FILENAME=" + file); // maybe i dont need it who knows
+        strings.push_back("SCRIPT_FILENAME=" + file);  // maybe i dont need it who knows
         strings.push_back("SERVER_NAME=");
         strings.push_back("SERVER_PORT=");
         strings.push_back("SERVER_SOFTWARE=");
@@ -62,34 +65,45 @@ void child_execve(RequestParser& req, std::string file) {
     std::vector<char*> cstrings;
     for (size_t i = 0; i < strings.size(); ++i)
         cstrings.push_back(const_cast<char*>(strings[i].c_str()));
-    // env in excve doesnt modify the strings so it's find to const cast
+    // env in excve doesnt modify the strings so it's fine to const cast
     cstrings.push_back(NULL);
 
     char* argv[2];
     argv[0] = const_cast<char*>(file.c_str());
     argv[1] = 0;
     execve(file.c_str(), argv, cstrings.data());
-}
 
-void child_fork(RequestParser& req, int fd[2], std::string file) {
-    Log::debug("CGI child_fork running");
-    if (dup2(fd[1], STDOUT_FILENO) == -1) {
-        Log::error("DUP2 FAIL");
-        Log::error(std::strerror(errno));
-    }
-    close(fd[0]);
-    close(fd[1]);
-    // modify directory
-    if (chdir("./www/cgi-bin/")) {
-        Log::error("CGI FAIL");
-        Log::error(std::strerror(errno));
-    }
-    child_execve(req, file);
     Log::error("EXECVE FAIL");
     Log::error(std::strerror(errno));
     exit(1);
+}
 
-    (void)req;
+void child_fork(RequestParser& req, int fd[2], int in_fd[2], std::string file) {
+    // modify directory
+    if (chdir("./www/cgi-bin/")) {
+        Log::error("chdir FAIL");
+        Log::error(std::strerror(errno));
+        exit(1);
+    }
+
+    Log::debug("CGI child_fork running");
+    if (dup2(in_fd[0], STDIN_FILENO) == -1) {
+        Log::error("DUP2 FAIL");
+        Log::error(std::strerror(errno));
+        exit(1);
+    }
+    std::cout << std::flush;
+    if (dup2(fd[1], STDOUT_FILENO) == -1) {
+        Log::error("DUP2 FAIL");
+        Log::error(std::strerror(errno));
+        exit(1);
+    }
+    close(fd[0]);
+    close(fd[1]);
+    close(in_fd[0]);
+    close(in_fd[1]);
+
+    child_execve(req, file);
 }
 
 int interpret_status(int status) {
@@ -106,14 +120,21 @@ int interpret_status(int status) {
 
 CgiProcess::CgiProcess(RequestParser& req, std::string file) {
     pid_t pid;
+    int in_fd[2];
 
     pipe(fd);
+    pipe(in_fd);
     pid = fork();
     if (pid == 0) {
-        child_fork(req, fd, file);
+        child_fork(req, fd, in_fd, file);
     } else if (pid > 0)  // parent
     {
         close(fd[1]);
+        close(in_fd[0]);
+
+        // feed the request body to the child's stdin, then close to send EOF
+        if (req.body.size()) write(in_fd[1], req.body.data(), req.body.size());
+        close(in_fd[1]);
 
         char buf[2048];
         ssize_t n;
@@ -133,6 +154,10 @@ CgiProcess::CgiProcess(RequestParser& req, std::string file) {
         status_code = interpret_status(status);
 
     } else {
+        close(fd[0]);
+        close(fd[1]);
+        close(in_fd[0]);
+        close(in_fd[1]);
         Log::error("CGI FAIL");
         Log::error(std::strerror(errno));
         status_code = 500;
