@@ -31,7 +31,14 @@ std::string httpheader_to_envvar_format(std::string header) {
 }
 
 // this builds the env char**
-void child_execve(RequestParser& req, std::string file) {
+void child_execve(RequestParser& req, const ServerConfig& config,
+                  const std::string& interpreter) {
+    std::string file;
+    file = req.URI;
+    if (file.find("?") != std::string::npos) file = utils::split(req.URI, "?")[0];
+    if (file.find("/") != std::string::npos)
+        file = utils::split(req.URI, "/")[utils::split(req.URI, "/").size() - 1];
+
     // this block setups the envs
     std::vector<std::string> strings;
     {
@@ -52,7 +59,7 @@ void child_execve(RequestParser& req, std::string file) {
         strings.push_back("PATH_INFO=" + req.URI);
         strings.push_back("SCRIPT_FILENAME=" + file);  // maybe i dont need it who knows
         strings.push_back("SERVER_NAME=");
-        strings.push_back("SERVER_PORT=");
+        strings.push_back("SERVER_PORT=" + utils::to_str(config.port));
         strings.push_back("SERVER_SOFTWARE=");
     }
     // this blocks add the header variables
@@ -68,17 +75,23 @@ void child_execve(RequestParser& req, std::string file) {
     // env in excve doesnt modify the strings so it's fine to const cast
     cstrings.push_back(NULL);
 
-    char* argv[2];
-    argv[0] = const_cast<char*>(file.c_str());
-    argv[1] = 0;
-    execve(file.c_str(), argv, cstrings.data());
+    // interpreter set -> [interpreter, script]; empty -> run the file directly
+    std::vector<char*> argv;
+    if (!interpreter.empty())
+        argv.push_back(const_cast<char*>(interpreter.c_str()));
+    argv.push_back(const_cast<char*>(file.c_str()));
+    argv.push_back(NULL);
+
+    const char* path = interpreter.empty() ? file.c_str() : interpreter.c_str();
+    execve(path, argv.data(), cstrings.data());
 
     Log::error("EXECVE FAIL");
     Log::error(std::strerror(errno));
     exit(1);
 }
 
-void child_fork(RequestParser& req, int fd[2], int in_fd[2], std::string file) {
+void child_fork(RequestParser& req, const ServerConfig& config, int fd[2], int in_fd[2],
+                const std::string& interpreter) {
     // modify directory
     if (chdir("./www/cgi-bin/")) {
         Log::error("chdir FAIL");
@@ -103,7 +116,7 @@ void child_fork(RequestParser& req, int fd[2], int in_fd[2], std::string file) {
     close(in_fd[0]);
     close(in_fd[1]);
 
-    child_execve(req, file);
+    child_execve(req, config, interpreter);
 }
 
 int interpret_status(int status) {
@@ -118,7 +131,8 @@ int interpret_status(int status) {
 }
 }  // namespace
 
-CgiProcess::CgiProcess(RequestParser& req, std::string file) {
+CgiProcess::CgiProcess(RequestParser& req, const ServerConfig& config,
+                       const std::string& interpreter) {
     pid_t pid;
     int in_fd[2];
 
@@ -126,7 +140,7 @@ CgiProcess::CgiProcess(RequestParser& req, std::string file) {
     pipe(in_fd);
     pid = fork();
     if (pid == 0) {
-        child_fork(req, fd, in_fd, file);
+        child_fork(req, config, fd, in_fd, interpreter);
     } else if (pid > 0)  // parent
     {
         close(fd[1]);

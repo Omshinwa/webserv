@@ -1,6 +1,4 @@
 #include "ResponseBuilder.hpp"
-#include "../utils/Log.hpp"
-#include "../utils/Utils.hpp"
 
 #include <dirent.h>
 
@@ -78,32 +76,20 @@ std::string reason_phrase(int status_code) {
 std::string mime_type(const std::string& path) {
     size_t dot = path.rfind('.');
 
-    if (dot == std::string::npos)
-        return "application/octet-stream";
+    if (dot == std::string::npos) return "application/octet-stream";
 
     std::string ext = utils::to_lower(path.substr(dot + 1));
-    if (ext == "html" || ext == "htm")
-        return "text/html";
-    if (ext == "css")
-        return "text/css";
-    if (ext == "js")
-        return "application/javascript";
-    if (ext == "json")
-        return "application/json";
-    if (ext == "txt")
-        return "text/plain";
-    if (ext == "png")
-        return "image/png";
-    if (ext == "jpg" || ext == "jpeg")
-        return "image/jpeg";
-    if (ext == "gif")
-        return "image/gif";
-    if (ext == "svg")
-        return "image/svg+xml";
-    if (ext == "ico")
-        return "image/x-icon";
-    if (ext == "pdf")
-        return "application/pdf";
+    if (ext == "html" || ext == "htm") return "text/html";
+    if (ext == "css") return "text/css";
+    if (ext == "js") return "application/javascript";
+    if (ext == "json") return "application/json";
+    if (ext == "txt") return "text/plain";
+    if (ext == "png") return "image/png";
+    if (ext == "jpg" || ext == "jpeg") return "image/jpeg";
+    if (ext == "gif") return "image/gif";
+    if (ext == "svg") return "image/svg+xml";
+    if (ext == "ico") return "image/x-icon";
+    if (ext == "pdf") return "application/pdf";
     return "application/octet-stream";
 }
 
@@ -137,7 +123,6 @@ bool path_matches(const std::string& uri, const std::string& path) {
 }
 }  // namespace
 
-
 void ResponseBuilder::find_location(RequestParser& req, const ServerConfig& config) {
     // find the matching location:
     const LocationConfig* best = NULL;
@@ -150,8 +135,7 @@ void ResponseBuilder::find_location(RequestParser& req, const ServerConfig& conf
         // pages/match != pages/match2 but they would both match
         // location `pages/match`
         if (path_matches(req.URI, it->path)) {
-            if (best == NULL || it->path.size() > best->path.size())
-                best = &*it;
+            if (best == NULL || it->path.size() > best->path.size()) best = &*it;
         }
     }
     // couldnt find the location
@@ -170,8 +154,7 @@ void ResponseBuilder::check_methods(RequestParser& req) {
         if (req.method == *it) break;
     }
     // couldnt find the method
-    if (it == location->methods.end())
-        status_code = 405;
+    if (it == location->methods.end()) status_code = 405;
 }
 
 void ResponseBuilder::handle_get(RequestParser& req, const ServerConfig& config) {
@@ -182,8 +165,8 @@ void ResponseBuilder::handle_get(RequestParser& req, const ServerConfig& config)
         return;
     }
     // check for root + URI request
-    const std::string&  root = location->has_root ? location->root : config.root;
-    std::string         filepath = utils::join_path(root, req.URI);
+    const std::string& root = location->has_root ? location->root : config.root;
+    std::string filepath = utils::join_path(root, req.URI);
 
     if (!utils::file_exists(filepath)) {
         status_code = 404;
@@ -198,9 +181,9 @@ void ResponseBuilder::handle_get(RequestParser& req, const ServerConfig& config)
 
         if (!index.empty() && utils::is_regular_file(index_path)) {
             filepath = index_path;  // serve the index file below
-        }
-        else {
-            bool autoindex = location->has_autoindex ? location->autoindex : config.autoindex;
+        } else {
+            bool autoindex =
+                    location->has_autoindex ? location->autoindex : config.autoindex;
             if (autoindex) {
                 body = build_autoindex(filepath, req.URI);
                 header["content-type"] = "text/html";
@@ -213,12 +196,28 @@ void ResponseBuilder::handle_get(RequestParser& req, const ServerConfig& config)
         }
     }
 
-    // Must be a readable regular file at this point.
-    if (!utils::is_regular_file(filepath) || !utils::is_readable(filepath)) {
+    // Must be a regular file at this point.
+    if (!utils::is_regular_file(filepath)) {
         status_code = 403;
         return;
     }
 
+    // CGI: does this file's extension map to a configured handler?
+    const std::string* interpreter = match_cgi(filepath);
+    if (interpreter != NULL) {
+        CgiProcess cgi(req, config, *interpreter);
+        if (cgi.status_code >= 400)
+            status_code = cgi.status_code;
+        else
+            parse_cgi_response(cgi.output);
+        return;
+    }
+
+    // Static file: must be readable.
+    if (!utils::is_readable(filepath)) {
+        status_code = 403;
+        return;
+    }
     try {
         body = utils::read_file(filepath);
         header["content-type"] = mime_type(filepath);
@@ -231,6 +230,19 @@ void ResponseBuilder::handle_get(RequestParser& req, const ServerConfig& config)
     }
 }
 
+// Match the file's extension against this location's configured cgi handlers.
+// Returns the interpreter ("" = run directly) or NULL when it isn't a CGI.
+const std::string* ResponseBuilder::match_cgi(const std::string& filepath) const {
+    for (std::map<std::string, std::string>::const_iterator it = location->cgi.begin();
+         it != location->cgi.end(); ++it) {
+        const std::string& ext = it->first;
+        if (filepath.size() >= ext.size() &&
+            filepath.compare(filepath.size() - ext.size(), ext.size(), ext) == 0)
+            return &it->second;
+    }
+    return NULL;
+}
+
 void ResponseBuilder::handle_post(RequestParser& req, const ServerConfig& config) {
     const std::string& root = location->has_root ? location->root : config.root;
     std::string upload_path;
@@ -238,8 +250,7 @@ void ResponseBuilder::handle_post(RequestParser& req, const ServerConfig& config
     if (location->has_upload) {
         std::string filename = req.URI;
         size_t slash = filename.rfind('/');
-        if (slash != std::string::npos)
-            filename = filename.substr(slash + 1);
+        if (slash != std::string::npos) filename = filename.substr(slash + 1);
         if (filename.empty()) {
             status_code = 400;
             return;
@@ -250,8 +261,7 @@ void ResponseBuilder::handle_post(RequestParser& req, const ServerConfig& config
     }
 
     std::string dir = upload_path.substr(0, upload_path.rfind('/'));
-    if (dir.empty())
-        dir = "/";
+    if (dir.empty()) dir = "/";
 
     if (!utils::file_exists(dir) || !utils::is_directory(dir)) {
         status_code = 404;
@@ -276,7 +286,8 @@ void ResponseBuilder::handle_post(RequestParser& req, const ServerConfig& config
         status_code = 201;
         header["location"] = req.URI;
     }
-    Log::event("POST: wrote " + utils::to_str(req.body.size()) + " bytes to `" + upload_path + "`");
+    Log::event("POST: wrote " + utils::to_str(req.body.size()) + " bytes to `" +
+               upload_path + "`");
 }
 
 void ResponseBuilder::handle_delete(RequestParser& req, const ServerConfig& config) {

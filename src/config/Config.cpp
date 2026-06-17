@@ -193,14 +193,13 @@ namespace {
                         loc.upload_dir = args[0];
                         loc.has_upload = true;
                     }
-                    // else if (name == "cgi_path") {
-                    //     if (args.size() != 1)
-                    //         fail("'cgi_path' expects one argument");
-                    // }
-                    // else if (name == "cgi_extension" || name == "cgi_ext") {
-                    //     if (args.size() != 1)
-                    //         fail("'cgi_extension' expects one argument");
-                    // }
+                    else if (name == "cgi") {
+                        if (args.size() < 1 || args.size() > 2)
+                            fail("'cgi' expects EXTENSION [INTERPRETER]");
+                        if (args[0].empty() || args[0][0] != '.')
+                            fail("'cgi' extension must start with '.'");
+                        loc.cgi[args[0]] = (args.size() == 2) ? args[1] : "";
+                    }
                     else
                         fail("unknown location directive '" + name + "'");
                 }
