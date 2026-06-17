@@ -126,10 +126,10 @@ std::string build_autoindex(const std::string& dirpath, const std::string& uri) 
 }
 
 bool path_matches(const std::string& uri, const std::string& path) {
-    if (!utils::starts_with(uri, path))
-        return false;
-    // exact match, or the next char is a '/' (real segment boundary)
-    return uri.size() == path.size() || uri[path.size()] == '/';
+    if (!utils::starts_with(uri, path)) return false;
+    if (uri.size() == path.size()) return true;     // exact match
+    if (path[path.size() - 1] == '/') return true;  // path already ends at a separator
+    return uri[path.size()] == '/';                 // real segment boundary
 }
 }  // namespace
 
@@ -225,12 +225,56 @@ void ResponseBuilder::handle_get(RequestParser& req, const ServerConfig& config)
 }
 
 void ResponseBuilder::handle_post(RequestParser& req, const ServerConfig& config) {
-    // upload_dir
-    // TODO
+    const std::string& root = location->has_root ? location->root : config.root;
+    std::string upload_path;
+
+    if (location->has_upload) {
+        std::string filename = req.URI;
+        size_t slash = filename.rfind('/');
+        if (slash != std::string::npos)
+            filename = filename.substr(slash + 1);
+        if (filename.empty()) {
+            status_code = 400;
+            return;
+        }
+        upload_path = utils::join_path(location->upload_dir, filename);
+    } else {
+        upload_path = utils::join_path(root, req.URI);
+    }
+
+    std::string dir = upload_path.substr(0, upload_path.rfind('/'));
+    if (dir.empty())
+        dir = "/";
+
+    if (!utils::file_exists(dir) || !utils::is_directory(dir)) {
+        status_code = 404;
+        return;
+    }
+    if (!utils::is_writable(dir)) {
+        status_code = 403;
+        return;
+    }
+
+    bool existed = utils::file_exists(upload_path);
+
+    if (!utils::write_file(upload_path, req.body)) {
+        status_code = 500;
+        Log::error(std::strerror(errno));
+        return;
+    }
+
+    if (existed) {
+        status_code = 204;
+    } else {
+        status_code = 201;
+        header["location"] = req.URI;
+    }
+    Log::event("POST: wrote " + utils::to_str(req.body.size()) + " bytes to `" + upload_path + "`");
 }
 
 void ResponseBuilder::handle_delete(RequestParser& req, const ServerConfig& config) {
-    
+    (void)config;  // unused
+    (void)req;     // unused
 }
 
 void ResponseBuilder::handle_method(RequestParser& req, const ServerConfig& config) {
