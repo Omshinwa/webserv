@@ -135,12 +135,11 @@ void ResponseBuilder::check_methods(RequestParser& req) {
 }
 
 void ResponseBuilder::handle_method(RequestParser& req, const ServerConfig& config) {
-    if (req.method == "GET")
-    // handle_get(req, config);
-    {
-        CgiProcess cgi(req, "python.py");
+    if (req.method == "GET") {
+        handle_get(req, config);
+        // CgiProcess cgi(req, "python.py");
         // CgiProcess cgi(req, "cgi_tester");
-        parse_cgi_response(cgi.output);
+        // parse_cgi_response(cgi.output);
     } else if (req.method == "POST")
         handle_post(req, config);
     else if (req.method == "DELETE")
