@@ -3,19 +3,22 @@
 
 #include <unistd.h>
 
+#include <string>
+
 #include "../config/Config.hpp"
 #include "RequestParser.hpp"
 
 class CgiProcess {
     public:
-    CgiProcess(RequestParser& res, std::string file);
+    CgiProcess(RequestParser& res, const ServerConfig& config,
+               const std::string& interpreter, const std::string& script_path);
     std::string output;
+    int exec_status;
 
     //
     // // private
     //
     private:
-    int status_code;
     int fd[2];
 };  // namespace CgiProcess
 

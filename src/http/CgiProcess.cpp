@@ -31,7 +31,13 @@ std::string httpheader_to_envvar_format(std::string header) {
 }
 
 // this builds the env char**
-void child_execve(RequestParser& req, std::string file) {
+void child_execve(RequestParser& req, const ServerConfig& config,
+                  const std::string& interpreter, const std::string& script_path) {
+    // we already chdir'd into the script's directory, so exec just the basename
+    size_t slash = script_path.rfind('/');
+    std::string file =
+            (slash == std::string::npos) ? script_path : script_path.substr(slash + 1);
+
     // this block setups the envs
     std::vector<std::string> strings;
     {
@@ -52,7 +58,7 @@ void child_execve(RequestParser& req, std::string file) {
         strings.push_back("PATH_INFO=" + req.URI);
         strings.push_back("SCRIPT_FILENAME=" + file);  // maybe i dont need it who knows
         strings.push_back("SERVER_NAME=");
-        strings.push_back("SERVER_PORT=");
+        strings.push_back("SERVER_PORT=" + utils::to_str(config.port));
         strings.push_back("SERVER_SOFTWARE=");
     }
     // this blocks add the header variables
@@ -68,19 +74,26 @@ void child_execve(RequestParser& req, std::string file) {
     // env in excve doesnt modify the strings so it's fine to const cast
     cstrings.push_back(NULL);
 
-    char* argv[2];
-    argv[0] = const_cast<char*>(file.c_str());
-    argv[1] = 0;
-    execve(file.c_str(), argv, cstrings.data());
+    // interpreter set -> [interpreter, script]; empty -> run the file directly
+    std::vector<char*> argv;
+    if (!interpreter.empty()) argv.push_back(const_cast<char*>(interpreter.c_str()));
+    argv.push_back(const_cast<char*>(file.c_str()));
+    argv.push_back(NULL);
+
+    const char* path = interpreter.empty() ? file.c_str() : interpreter.c_str();
+    execve(path, argv.data(), cstrings.data());
 
     Log::error("EXECVE FAIL");
     Log::error(std::strerror(errno));
     exit(1);
 }
 
-void child_fork(RequestParser& req, int fd[2], int in_fd[2], std::string file) {
-    // modify directory
-    if (chdir("./www/cgi-bin/")) {
+void child_fork(RequestParser& req, const ServerConfig& config, int fd[2], int in_fd[2],
+                const std::string& interpreter, const std::string& script_path) {
+    // run the script from its own directory (same place the URI resolved to)
+    size_t slash = script_path.rfind('/');
+    std::string dir = (slash == std::string::npos) ? "." : script_path.substr(0, slash);
+    if (chdir(dir.c_str())) {
         Log::error("chdir FAIL");
         Log::error(std::strerror(errno));
         exit(1);
@@ -103,7 +116,7 @@ void child_fork(RequestParser& req, int fd[2], int in_fd[2], std::string file) {
     close(in_fd[0]);
     close(in_fd[1]);
 
-    child_execve(req, file);
+    child_execve(req, config, interpreter, script_path);
 }
 
 int interpret_status(int status) {
@@ -118,15 +131,18 @@ int interpret_status(int status) {
 }
 }  // namespace
 
-CgiProcess::CgiProcess(RequestParser& req, std::string file) {
+CgiProcess::CgiProcess(RequestParser& req, const ServerConfig& config,
+                       const std::string& interpreter, const std::string& script_path) {
     pid_t pid;
     int in_fd[2];
 
+    Log::debug("interpreter:" + interpreter);
+    Log::debug("script path:" + script_path);
     pipe(fd);
     pipe(in_fd);
     pid = fork();
     if (pid == 0) {
-        child_fork(req, fd, in_fd, file);
+        child_fork(req, config, fd, in_fd, interpreter, script_path);
     } else if (pid > 0)  // parent
     {
         close(fd[1]);
@@ -148,10 +164,10 @@ CgiProcess::CgiProcess(RequestParser& req, std::string file) {
         if (waitpid(pid, &status, 0) == -1) {
             Log::error("WAITPID FAIL");
             Log::error(std::strerror(errno));
-            status_code = 500;
+            exec_status = 500;
             return;
         }
-        status_code = interpret_status(status);
+        exec_status = interpret_status(status);
 
     } else {
         close(fd[0]);
@@ -160,7 +176,7 @@ CgiProcess::CgiProcess(RequestParser& req, std::string file) {
         close(in_fd[1]);
         Log::error("CGI FAIL");
         Log::error(std::strerror(errno));
-        status_code = 500;
+        exec_status = 500;
         return;
         // fork failed -> 500
     }

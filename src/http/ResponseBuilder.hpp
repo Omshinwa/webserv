@@ -29,6 +29,7 @@ class ResponseBuilder {
         void handle_delete(RequestParser& req, const ServerConfig& config);
 
         void parse_cgi_response(std::string raw);
+        const std::string* match_cgi(const std::string& filepath) const;
 
         // INACCESSIBLE
         ResponseBuilder();
