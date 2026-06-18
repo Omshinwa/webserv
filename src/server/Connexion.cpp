@@ -91,14 +91,7 @@ ssize_t Connexion::do_send() {
     ssize_t n = send(fd, buf, left, 0);
     if (n > 0) {
         log_event(">    SENT to file descriptor " + utils::to_str(fd));
-
-        if (n > 600)  // we only display up to 500 chars in the debug
-        {
-            log_info(_send_buf.substr(_send_offset, _send_offset + 500));
-            log_info("...");
-            log_info("...");
-        } else
-            log_info(buf);
+        log_info(buf);
 
         _send_offset += n;  // update the offset buffer
         if (_send_offset >= _send_buf.size())
@@ -111,6 +104,7 @@ void Connexion::queue_response() {
     // _active may be NULL if we errored before parsing the Host header (e.g. a
     // 400 on a malformed header); fall back to the default server block.
     const ServerConfig& config = _active ? *_active : _configs[0];
+    request.remote_addr = remote_addr;
     ResponseBuilder response(request, config);
     _send_buf = response.build();
     _send_offset = 0;
@@ -142,7 +136,11 @@ const ServerConfig& Connexion::resolve_virtual_host(const std::string& host) con
 
 void Connexion::log_info(std::string s) {
     Log::color_idx = fd;
-    Log::info(s);
+    if (s.size() > 200) {  // only display the first 200 characters
+        Log::info(s.substr(0, 200));
+        Log::info("...");
+    } else
+        Log::info(s);
 }
 
 void Connexion::log_event(std::string s) {

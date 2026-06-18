@@ -20,15 +20,14 @@ class Server {
     void run();  // main poll loop, blocks forever
 
     private:
-    int _fd;
-    int _port;
-    std::string _host;
-    std::vector<ServerConfig> _configs;
+    // listen_fd -> the server configs sharing that host:port (virtual hosts)
+    std::map<int, std::vector<ServerConfig> > _listeners;
     std::vector<pollfd> _pollfds;           // list of all the poll requests
     std::map<int, Connexion*> _connexions;  // int fd -> Connexion*
 
+    int create_socket(const std::string& host, int port);
     void append_to_poll(int fd);
-    void accept_new_connexion();
+    void accept_new_connexion(int listen_fd);
     void drop_connexion(Connexion* c);
     void handle_event(pollfd& pfd);
 

@@ -1,5 +1,6 @@
 #include "Server.hpp"
 
+#include <arpa/inet.h>
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -18,49 +19,62 @@
 
 std::ostream& operator<<(std::ostream& os, const sockaddr_in& addr);
 
-// create socket -> setsockopt -> nonblock -> bind -> listen
-Server::Server(const std::vector<ServerConfig>& configs)
-        : _fd(-1), _port(configs[0].port), _host(configs[0].host), _configs(configs) {
-    // create the socket
-    {
-        _fd = socket(AF_INET, SOCK_STREAM, 0);
-        if (_fd == -1) {
-            Log::error("Server socket error");
-            throw std::runtime_error(std::strerror(errno));
-        }
-        log_event("NEW Server Socket FD: " + utils::to_str(_fd));
-
-        int opt = 1;  // Allows to restart without TIME_WAIT
-        setsockopt(_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-
-        fcntl(_fd, F_SETFL, O_NONBLOCK);  // non blocking for macos
+// Group the configs by host:port; each unique pair gets one listening socket,
+// and the configs sharing it become its virtual hosts.
+Server::Server(const std::vector<ServerConfig>& configs) {
+    std::map<std::string, std::vector<ServerConfig> > groups;
+    for (size_t i = 0; i < configs.size(); i++) {
+        std::string key = configs[i].host + ":" + utils::to_str(configs[i].port);
+        groups[key].push_back(configs[i]);
     }
 
-    // binds it
-    {
-        sockaddr_in addr;
-        std::memset(&addr, 0, sizeof(addr));       // zero — there are padding fields
-        addr.sin_family = AF_INET;                 // must match socket()'s domain
-        addr.sin_port = htons(_port);              // network byte order
-        addr.sin_addr.s_addr = htonl(INADDR_ANY);  // listen on all interfaces
+    for (std::map<std::string, std::vector<ServerConfig> >::iterator it = groups.begin();
+         it != groups.end(); ++it) {
+        const ServerConfig& first = it->second[0];
+        int fd = create_socket(first.host, first.port);
+        _listeners[fd] = it->second;
+        append_to_poll(fd);
+    }
+}
 
-        if (bind(_fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
-            std::cerr << Log::red_bg << "bind error" << Log::nl;
-            throw std::runtime_error(std::strerror(errno));
-        }
-        std::cout << "Listening to: \n" << addr;
+// create socket -> setsockopt -> nonblock -> bind -> listen, returns the listen fd
+int Server::create_socket(const std::string& host, int port) {
+    int fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (fd == -1) {
+        Log::error("Server socket error");
+        throw std::runtime_error(std::strerror(errno));
+    }
+    log_event("NEW Server Socket FD: " + utils::to_str(fd));
+
+    int opt = 1;  // Allows to restart without TIME_WAIT
+    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+
+    fcntl(fd, F_SETFL, O_NONBLOCK);  // non blocking for macos
+
+    sockaddr_in addr;
+    std::memset(&addr, 0, sizeof(addr));  // zero — there are padding fields
+    addr.sin_family = AF_INET;            // must match socket()'s domain
+    addr.sin_port = htons(port);          // network byte order
+    if (host.empty() || host == "0.0.0.0")
+        addr.sin_addr.s_addr = htonl(INADDR_ANY);  // all interfaces
+    else
+        addr.sin_addr.s_addr = inet_addr(host.c_str());  // specific IP
+
+    if (bind(fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
+        close(fd);
+        std::cerr << Log::red_bg << "bind error" << Log::nl;
+        throw std::runtime_error(std::strerror(errno));
+    }
+    std::cout << "Listening to: \n" << addr;
+
+    const int MAX_CONNEXION = 10;
+    if (listen(fd, MAX_CONNEXION) < 0) {
+        close(fd);
+        std::cerr << Log::red_bg << "listen error" << Log::nl;
+        throw std::runtime_error(std::strerror(errno));
     }
 
-    // listen
-    {
-        const int MAX_CONNEXION = 10;
-        if (listen(_fd, MAX_CONNEXION) < 0) {
-            std::cerr << Log::red_bg << "listen error" << Log::nl;
-            throw std::runtime_error(std::strerror(errno));
-        }
-    }
-
-    append_to_poll(_fd);
+    return fd;
 }
 
 void Server::append_to_poll(int fd) {
@@ -72,12 +86,15 @@ void Server::append_to_poll(int fd) {
 }
 
 Server::~Server() {
-    Log::debug("~Destructor Server fd " + utils::to_str(_fd));
+    Log::debug("~Destructor Server");
     for (std::map<int, Connexion*>::iterator it = _connexions.begin();
          it != _connexions.end(); ++it) {
         delete it->second;  // destructor closes fd
     }
-    if (_fd >= 0) close(_fd);
+    for (std::map<int, std::vector<ServerConfig> >::iterator it = _listeners.begin();
+         it != _listeners.end(); ++it) {
+        close(it->first);
+    }
 }
 
 // poll uses events and revents:
@@ -140,7 +157,7 @@ void Server::run() {
 void Server::handle_event(pollfd& pfd) {
     // 1. Handle Errors
     if (pfd.revents & (POLLHUP | POLLERR | POLLNVAL)) {
-        if (pfd.fd == _fd) {  // the poll is the server
+        if (_listeners.count(pfd.fd)) {  // the poll is a listening socket
             log_error("server fatal error");
             throw std::runtime_error("listening socket failed");
         }
@@ -150,8 +167,8 @@ void Server::handle_event(pollfd& pfd) {
 
     // 2. Reads
     if (pfd.revents & POLLIN) {
-        if (pfd.fd == _fd) {  // the poll is the server
-            accept_new_connexion();
+        if (_listeners.count(pfd.fd)) {  // the poll is a listening socket
+            accept_new_connexion(pfd.fd);
         } else {
             Connexion* c = _connexions[pfd.fd];
             c->do_recv();
@@ -172,13 +189,20 @@ void Server::handle_event(pollfd& pfd) {
 }
 
 // Construct a Connexion and register it if no error
-void Server::accept_new_connexion() {
+void Server::accept_new_connexion(int listen_fd) {
     Connexion* c;
 
     try {
-        int connexion_fd = accept(_fd, NULL, NULL);
+        sockaddr_in addr;
+        socklen_t len = sizeof(addr);
+        int connexion_fd = accept(listen_fd, (struct sockaddr*)&addr, &len);
         if (connexion_fd < 0) throw std::runtime_error(std::strerror(errno));
-        c = new Connexion(connexion_fd, _configs);
+        c = new Connexion(connexion_fd, _listeners[listen_fd]);
+
+        uint32_t ip = ntohl(addr.sin_addr.s_addr);  // host byte order
+        c->remote_addr = utils::to_str((ip >> 24) & 0xFF) + "." +
+                         utils::to_str((ip >> 16) & 0xFF) + "." +
+                         utils::to_str((ip >> 8) & 0xFF) + "." + utils::to_str(ip & 0xFF);
         log_event("NEW Client Socket FD: " + utils::to_str(c->fd));
     } catch (const std::exception& e) {
         log_error(std::string("accept error: ") + e.what());
@@ -216,10 +240,10 @@ void Server::drop_connexion(Connexion* c) {
 //
 //
 
-void Server::log_info(std::string s) { std::cout << Log::color(_fd) << s << Log::nl; }
+void Server::log_info(std::string s) { std::cout << Log::color(0) << s << Log::nl; }
 
 void Server::log_event(std::string s) {
-    std::cout << Log::background(_fd) << s << Log::nl;
+    std::cout << Log::background(0) << s << Log::nl;
 }
 
 void Server::log_error(std::string s) { Log::error(s); }

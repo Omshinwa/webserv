@@ -12,7 +12,7 @@
 #include "../http/ResponseBuilder.hpp"
 
 class Connexion {
-  public:
+    public:
     enum State {
         READING,  // waiting for request bytes
         WRITING,  // response queued, sending it out
@@ -20,6 +20,10 @@ class Connexion {
     };
 
     const int fd;
+
+    // Client IP, set by the Server right after accept(); handed to the
+    // request when the response is built (used for the CGI REMOTE_ADDR).
+    std::string remote_addr;
 
     // configs: all server blocks sharing this listening socket; used to
     // resolve the virtual host once the request's Host header is known.
@@ -41,7 +45,7 @@ class Connexion {
     // Once you've parsed a complete request, build the response and call this.
     void queue_response();
 
-  private:
+    private:
     State _state;
     std::string _recv_buf;
     std::string _send_buf;

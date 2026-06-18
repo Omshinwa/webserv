@@ -10,7 +10,7 @@
 
 class CgiProcess {
     public:
-    CgiProcess(RequestParser& res, const ServerConfig& config,
+    CgiProcess(const RequestParser& res, const ServerConfig& config,
                const std::string& interpreter, const std::string& script_path);
     std::string output;
     int exec_status;
