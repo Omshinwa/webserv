@@ -103,24 +103,27 @@
 </head>
 <body>
 
+<nav style="margin-bottom:20px">
+  <a href="/" style="color:#94a3b8;text-decoration:none;font-size:14px">← Accueil</a>
+</nav>
 <h1>42 Webserv — Fichiers</h1>
 
 <!-- Upload -->
 <div class="card">
-  <h2>Upload a file</h2>
+  <h2>Uploader un fichier</h2>
   <input type="file" id="file-input">
-  <button class="btn" id="btn-upload">Upload</button>
+  <button class="btn" id="btn-upload">Envoyer</button>
   <div id="toast"></div>
 </div>
 
 <!-- File list -->
 <div class="card">
   <div class="list-header">
-    <h2>Uploaded files</h2>
-    <button class="btn btn-sm" id="btn-refresh">↻ Refresh</button>
+    <h2>Fichiers uploadés</h2>
+    <button class="btn btn-sm" id="btn-refresh">↻ Actualiser</button>
   </div>
   <ul id="file-list"></ul>
-  <p id="empty-msg" style="display:none">No files uploaded.</p>
+  <p id="empty-msg" style="display:none">Aucun fichier.</p>
 </div>
 
 <script>
@@ -155,7 +158,7 @@
 
       var btn = document.createElement('button');
       btn.className = 'btn-del';
-      btn.textContent = 'Delete';
+      btn.textContent = 'Supprimer';
       btn.onclick = function () { deleteFile(name); };
 
       li.appendChild(span);
@@ -189,14 +192,14 @@
     fetch(UPLOAD_PATH + '/' + encodeURIComponent(name), { method: 'DELETE' })
       .then(function (r) {
         if (r.status === 204) {
-          toast('File "' + name + '" deleted.', 'ok');
+          toast('Fichier "' + name + '" supprimé.', 'ok');
         } else {
-          toast('Error ' + r.status + ' while deleting the file.', 'err');
+          toast('Erreur ' + r.status + ' lors de la suppression.', 'err');
         }
         fetchFileList();
       })
       .catch(function (e) {
-        toast('Network error : ' + e.message, 'err');
+        toast('Erreur réseau : ' + e.message, 'err');
       });
   }
 
@@ -204,9 +207,9 @@
   document.getElementById('btn-upload').addEventListener('click', function () {
     var input = document.getElementById('file-input');
     var f = input.files[0];
-    if (!f) { toast('No file selected.', 'err'); return; }
+    if (!f) { toast('Aucun fichier sélectionné.', 'err'); return; }
 
-    toast('Uploading "' + f.name + '" (' + f.size + ' bytes)…', 'ok');
+    toast('Upload de "' + f.name + '" (' + f.size + ' octets)…', 'ok');
 
     fetch(UPLOAD_PATH + '/' + encodeURIComponent(f.name), {
       method: 'POST',
@@ -215,15 +218,15 @@
     })
     .then(function (r) {
       if (r.status === 201 || r.status === 204) {
-        toast('"' + f.name + '" uploaded successfully (HTTP ' + r.status + ').', 'ok');
+        toast('"' + f.name + '" uploadé avec succès (HTTP ' + r.status + ').', 'ok');
         input.value = '';
         fetchFileList();
       } else {
-        toast('Server error : HTTP ' + r.status, 'err');
+        toast('Erreur serveur : HTTP ' + r.status, 'err');
       }
     })
     .catch(function (e) {
-      toast('Network error : ' + e.message, 'err');
+      toast('Erreur réseau : ' + e.message, 'err');
     });
   });
 

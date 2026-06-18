@@ -19,8 +19,14 @@
                 </h1>
                 <p class="text-slate-400 mt-1">HTTP/1.0 Server Written in C++ 98</p>
             </div>
-            <div class="bg-slate-800 px-4 py-2 rounded-full border border-slate-700 text-sm font-mono">
-                Status: <span id="server-status" class="text-teal-400 font-bold">Checking...</span>
+            <div class="flex items-center gap-3">
+                <a href="/upload.html"
+                    class="bg-teal-600 hover:bg-teal-500 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">
+                    📁 Fichiers
+                </a>
+                <div class="bg-slate-800 px-4 py-2 rounded-full border border-slate-700 text-sm font-mono">
+                    Status: <span id="server-status" class="text-teal-400 font-bold">Online</span>
+                </div>
             </div>
         </header>
 
@@ -47,15 +53,16 @@
 
             <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 space-y-4">
                 <h2 class="text-xl font-bold text-teal-400 flex items-center gap-2">
+                    <span class="bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded text-xs font-mono">POST</span>
                     <span class="bg-red-500/10 text-red-400 px-2 py-0.5 rounded text-xs font-mono">DELETE</span>
-                    File Deletion
+                    Gestionnaire de fichiers
                 </h2>
-                <p class="text-slate-300 text-sm">Sends a <code>DELETE</code> HTTP request. Ensure your webserv
-                    configuration allows the DELETE method for this route.</p>
-                <button id="delete-btn"
-                    class="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded text-sm transition font-medium cursor-pointer">
-                    Execute DELETE Request
-                </button>
+                <p class="text-slate-300 text-sm">Uploadez des fichiers sur le serveur et supprimez-les depuis
+                    une interface dédiée.</p>
+                <a href="/upload.html"
+                    class="inline-block bg-teal-600 hover:bg-teal-500 text-white px-4 py-2 rounded text-sm transition font-medium">
+                    Ouvrir le gestionnaire →
+                </a>
             </div>
 
             <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 space-y-4 md:col-span-2">
@@ -108,8 +115,6 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const statusEl = document.getElementById('server-status');
-            const deleteBtn = document.getElementById('delete-btn');
             const postForm = document.getElementById('post-form');
             const responseBox = document.getElementById('response-box');
             const responseText = document.getElementById('response-text');
@@ -123,18 +128,7 @@
             //         statusEl.textContent = 'Online ✅ (Serving Static)';
             //     });
 
-            // 2. Handle DELETE Request
-            deleteBtn.addEventListener('click', async () => {
-                if (!confirm("Test DELETE request on /delete-target.txt?")) return;
-                try {
-                    const response = await fetch('/delete-target.txt', { method: 'DELETE' });
-                    alert(`DELETE Response Status: ${response.status}`);
-                } catch (err) {
-                    alert(`Delete failed: ${err.message}`);
-                }
-            });
-
-            // 3. Handle POST Form Submission
+            // Handle POST Form Submission
             postForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
 
