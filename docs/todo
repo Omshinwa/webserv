@@ -7,6 +7,8 @@
 * timeout the cgi if it's too long
 * cgi php ?
 * servir plusieurs site web (html) propre
+* error pages (config can redirect to them)
+
 
 # Maybe
 <!-- * handle all the vars of CGI -->
