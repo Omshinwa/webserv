@@ -36,7 +36,7 @@ void child_execve(RequestParser& req, const ServerConfig& config,
     // we already chdir'd into the script's directory, so exec just the basename
     size_t slash = script_path.rfind('/');
     std::string file =
-        (slash == std::string::npos) ? script_path : script_path.substr(slash + 1);
+            (slash == std::string::npos) ? script_path : script_path.substr(slash + 1);
 
     // this block setups the envs
     std::vector<std::string> strings;
@@ -76,8 +76,7 @@ void child_execve(RequestParser& req, const ServerConfig& config,
 
     // interpreter set -> [interpreter, script]; empty -> run the file directly
     std::vector<char*> argv;
-    if (!interpreter.empty())
-        argv.push_back(const_cast<char*>(interpreter.c_str()));
+    if (!interpreter.empty()) argv.push_back(const_cast<char*>(interpreter.c_str()));
     argv.push_back(const_cast<char*>(file.c_str()));
     argv.push_back(NULL);
 
@@ -137,6 +136,8 @@ CgiProcess::CgiProcess(RequestParser& req, const ServerConfig& config,
     pid_t pid;
     int in_fd[2];
 
+    Log::debug("interpreter:" + interpreter);
+    Log::debug("script path:" + script_path);
     pipe(fd);
     pipe(in_fd);
     pid = fork();
