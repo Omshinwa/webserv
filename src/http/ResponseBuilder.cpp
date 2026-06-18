@@ -1,8 +1,10 @@
 #include "ResponseBuilder.hpp"
 
 #include <dirent.h>
+#include <unistd.h>
 
 #include <cerrno>
+#include <cstdio>
 #include <cstring>
 #include <sstream>
 
@@ -263,8 +265,42 @@ void ResponseBuilder::handle_post(RequestParser& req, const ServerConfig& config
 }
 
 void ResponseBuilder::handle_delete(RequestParser& req, const ServerConfig& config) {
-    (void)config;  // unused
-    (void)req;     // unused
+    const std::string& root = location->has_root ? location->root : config.root;
+    std::string filepath = utils::join_path(root, req.URI);
+
+    if (!utils::file_exists(filepath)) {
+        status_code = 404;
+        return;
+    }
+    if (!utils::is_regular_file(filepath)) {
+        status_code = 403;
+        return;
+    }
+
+    // Check if the parent directory is writable and executable before attempting to
+    // delete the file
+    std::string parent;
+    std::string::size_type slash = filepath.find_last_of('/');
+    if (slash == std::string::npos)
+        parent = ".";
+    else if (slash == 0)
+        parent = "/";
+    else
+        parent = filepath.substr(0, slash);
+
+    if (access(parent.c_str(), W_OK | X_OK) != 0) {
+        status_code = 403;
+        return;
+    }
+
+    if (std::remove(filepath.c_str()) != 0) {
+        status_code = 500;
+        Log::error(std::strerror(errno));
+        return;
+    }
+
+    status_code = 204;
+    Log::event("DELETE: removed `" + filepath + "`");
 }
 
 void ResponseBuilder::handle_method(RequestParser& req, const ServerConfig& config) {
