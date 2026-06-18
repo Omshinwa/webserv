@@ -52,14 +52,22 @@ void child_execve(const RequestParser& req, const ServerConfig& config,
             strings.push_back("QUERY_STRING=");
         strings.push_back("SERVER_PROTOCOL=HTTP/1.0");
         strings.push_back("GATEWAY_INTERFACE=CGI/1.1");
-        // NOTE: the 42 cgi_tester binary returns 500 "PATH_INFO incorrect"
-        // whenever SCRIPT_NAME is non-empty, so we leave it empty here.
-        strings.push_back("SCRIPT_NAME=");
+        strings.push_back("SCRIPT_NAME=");  // 42 tester bug
         strings.push_back("PATH_INFO=" + req.URI);
-        strings.push_back("SCRIPT_FILENAME=" + file);  // maybe i dont need it who knows
-        strings.push_back("SERVER_NAME=");
+
+        // AUTH_TYPE, no need, we dont require any authentitication
+        strings.push_back("REMOTE_ADDR=" + req.remote_addr);
+        strings.push_back("REMOTE_HOST=" + req.remote_addr);
+
+        std::string host = req.get_header("host");  // "localhost:8080"
+        size_t colon = host.find(':');
+        if (colon != std::string::npos) host = host.substr(0, colon);  // "localhost"
+        if (host.empty())
+            host = config.server_names.empty() ? config.host : config.server_names[0];
+        strings.push_back("SERVER_NAME=" + host);
+
         strings.push_back("SERVER_PORT=" + utils::to_str(config.port));
-        strings.push_back("SERVER_SOFTWARE=");
+        strings.push_back("SERVER_SOFTWARE=webserv/1.0");
     }
     // this blocks add the header variables
     {

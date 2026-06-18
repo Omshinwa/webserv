@@ -176,9 +176,17 @@ void Server::accept_new_connexion() {
     Connexion* c;
 
     try {
-        int connexion_fd = accept(_fd, NULL, NULL);
+        sockaddr_in addr;
+        socklen_t len = sizeof(addr);
+        int connexion_fd = accept(_fd, (struct sockaddr*)&addr, &len);
         if (connexion_fd < 0) throw std::runtime_error(std::strerror(errno));
         c = new Connexion(connexion_fd, _configs);
+
+        uint32_t ip = ntohl(addr.sin_addr.s_addr);  // host byte order
+        c->remote_addr = utils::to_str((ip >> 24) & 0xFF) + "." +
+                         utils::to_str((ip >> 16) & 0xFF) + "." +
+                         utils::to_str((ip >> 8) & 0xFF) + "." +
+                         utils::to_str(ip & 0xFF);
         log_event("NEW Client Socket FD: " + utils::to_str(c->fd));
     } catch (const std::exception& e) {
         log_error(std::string("accept error: ") + e.what());

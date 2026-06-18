@@ -30,6 +30,7 @@ class RequestParser {
     std::string URI;
     std::string protocol;
     std::string body;
+    std::string remote_addr;  // client IP, filled in by the Connexion
 
     //
     // // PRIVATE
