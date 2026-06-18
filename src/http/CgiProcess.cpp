@@ -30,8 +30,8 @@ std::string httpheader_to_envvar_format(std::string header) {
     return "HTTP_" + header;
 }
 
-// this builds the env char**
-void child_execve(RequestParser& req, const ServerConfig& config,
+// this builds the env char** in the stack
+void child_execve(const RequestParser& req, const ServerConfig& config,
                   const std::string& interpreter, const std::string& script_path) {
     // we already chdir'd into the script's directory, so exec just the basename
     size_t slash = script_path.rfind('/');
@@ -88,8 +88,9 @@ void child_execve(RequestParser& req, const ServerConfig& config,
     exit(1);
 }
 
-void child_fork(RequestParser& req, const ServerConfig& config, int fd[2], int in_fd[2],
-                const std::string& interpreter, const std::string& script_path) {
+void child_fork(const RequestParser& req, const ServerConfig& config, int fd[2],
+                int in_fd[2], const std::string& interpreter,
+                const std::string& script_path) {
     // run the script from its own directory (same place the URI resolved to)
     size_t slash = script_path.rfind('/');
     std::string dir = (slash == std::string::npos) ? "." : script_path.substr(0, slash);
@@ -99,7 +100,7 @@ void child_fork(RequestParser& req, const ServerConfig& config, int fd[2], int i
         exit(1);
     }
 
-    Log::debug("CGI child_fork running");
+    // Log::debug("CGI child_fork running");
     if (dup2(in_fd[0], STDIN_FILENO) == -1) {
         Log::error("DUP2 FAIL");
         Log::error(std::strerror(errno));
@@ -131,7 +132,7 @@ int interpret_status(int status) {
 }
 }  // namespace
 
-CgiProcess::CgiProcess(RequestParser& req, const ServerConfig& config,
+CgiProcess::CgiProcess(const RequestParser& req, const ServerConfig& config,
                        const std::string& interpreter, const std::string& script_path) {
     pid_t pid;
     int in_fd[2];
@@ -156,7 +157,13 @@ CgiProcess::CgiProcess(RequestParser& req, const ServerConfig& config,
         ssize_t n;
         while ((n = read(fd[0], buf, sizeof(buf))) > 0) output.append(buf, n);
 
-        Log::debug("CGI generated:\n" + output);
+        Log::debug("CGI generated:");
+        if (output.size() > 150)  // we only display up to 150 chars in the debug
+        {
+            Log::debug(output.substr(0, 150));
+            Log::debug("...");
+        } else
+            Log::debug(output);
 
         int status;
         // pid_t r = waitpid(pid, &status, WNOHANG);
