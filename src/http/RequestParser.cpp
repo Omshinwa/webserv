@@ -97,7 +97,7 @@ void RequestParser::parse_header(std::string header_data, std::string delim) {
         }
     }
 
-    if (header.find("host") == header.end()) {
+    if (!header.count("host")) {
         Log::error("Header error: no host key");
         state = ERROR;
         return;
@@ -176,7 +176,7 @@ void RequestParser::set_config(const ServerConfig& cfg) {
 
     // No Content-Length means no body, so the request is already complete.
     // only true in HTTP 1.0, otherwise chunks
-    if (header.find("content-length") == header.end()) {
+    if (!header.count("content-length")) {
         state = COMPLETE;
         return;
     }

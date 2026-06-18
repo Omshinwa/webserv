@@ -1,22 +1,22 @@
 # Mandatory
-* cookies
+* cookies & session
 * handle multiple server config with different host:port
 
-* add CGI stuff to poll() * the fd will need to sit in the poll(), also Connexion needs to have a cgi_pid ? idk
+* add CGI's fd to poll() * the fd will need to sit in the poll(), also Connexion needs to have a cgi_pid ? idk
 * test CGI that uses POST etc...
+* timeout the cgi if it's too long
+* cgi php ?
+* servir plusieurs site web (html) propre
 
 # Maybe
-* handle all the vars of CGI
+<!-- * handle all the vars of CGI -->
 * 1.1 HTTP? chunked 
+* tighter parsing (only accept GET POST DELETE as request, only accept on/off as values for autoindex etc)
 
 * Prettier logger (add the timestamp), make debug() info() more consistent
 * draw a schema of the whole control flow
 
 # checks to do when we're done
 
-* config's body size limit is exceeded
 * do stress tests (idk how, basically have tons of connexions to the server)
-* timeout the cgi if it's too long
 * tests all the errors, 431 etc
-
-http://localhost:8080/cgi-bin/cgi_tester
