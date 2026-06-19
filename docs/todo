@@ -21,4 +21,6 @@
 # checks to do when we're done
 
 * do stress tests (idk how, basically have tons of connexions to the server)
+* use siege on a normal webpage
+* use siege on a cgi
 * tests all the errors, 431 etc

@@ -24,16 +24,9 @@ std::string to_str(T v) {
     return oss.str();
 }
 
-// specialized
-
-std::string capitalize_header(std::string s);
-
 // numeric parsing - returns false on failure
 bool parse_int(const std::string& s, int& out);
 bool parse_size(const std::string& s, size_t& out);
-
-bool parse_http_header_line(const std::string& line, std::string& key,
-                            std::string& value);
 
 // filesystem
 bool file_exists(const std::string& path);

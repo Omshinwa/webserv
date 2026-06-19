@@ -1,8 +1,4 @@
 #include "Server.hpp"
-#include "../utils/Log.hpp"
-#include "../utils/Utils.hpp"
-#include "Connexion.hpp"
-#include "signal.hpp"
 
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -10,9 +6,15 @@
 #include <unistd.h>
 
 #include <cerrno>
+#include <cstddef>
 #include <cstring>
 #include <iostream>
 #include <stdexcept>
+
+#include "../utils/Log.hpp"
+#include "../utils/Utils.hpp"
+#include "Connexion.hpp"
+#include "signal.hpp"
 
 // Group the configs by host:port; each unique pair gets one listening socket,
 // and the configs sharing it become its virtual hosts.
@@ -29,46 +31,56 @@ Server::Server(const std::vector<ServerConfig>& configs) {
         int fd = create_socket(first.host, first.port);
         _listeners[fd] = it->second;
         append_to_poll(fd);
+
+        log_event("Server Listening to: " + first.host + ":" + utils::to_str(first.port) +
+                  ", fd:" + utils::to_str(fd));
     }
 }
 
-// create socket -> setsockopt -> nonblock -> bind -> listen, returns the listen fd
+// create socket -> nonblock -> bind -> listen, returns the listen fd
 int Server::create_socket(const std::string& host, int port) {
-    int fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (fd == -1) {
-        Log::error("Server socket error");
-        throw std::runtime_error(std::strerror(errno));
-    }
-    log_event("NEW Server Socket FD: " + utils::to_str(fd));
+    int fd;
+    // create the socket
+    {
+        fd = socket(AF_INET, SOCK_STREAM, 0);
+        if (fd == -1) {
+            Log::error("Server socket error");
+            throw std::runtime_error(std::strerror(errno));
+        }
 
-    int opt = 1;  // Allows to restart without TIME_WAIT
-    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+        int opt = 1;  // Allows to restart without TIME_WAIT
+        setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
-    fcntl(fd, F_SETFL, O_NONBLOCK);  // non blocking for macos
-
-    sockaddr_in addr;
-    std::memset(&addr, 0, sizeof(addr));  // zero — there are padding fields
-    addr.sin_family = AF_INET;            // must match socket()'s domain
-    addr.sin_port = htons(port);          // network byte order
-    if (host.empty() || host == "0.0.0.0")
-        addr.sin_addr.s_addr = htonl(INADDR_ANY);  // all interfaces
-    else
-        addr.sin_addr.s_addr = inet_addr(host.c_str());  // specific IP
-
-    if (bind(fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
-        close(fd);
-        std::cerr << Log::red_bg << "bind error" << Log::nl;
-        throw std::runtime_error(std::strerror(errno));
-    }
-    std::cout << "Listening to: \n" << addr;
-
-    const int MAX_CONNEXION = 10;
-    if (listen(fd, MAX_CONNEXION) < 0) {
-        close(fd);
-        std::cerr << Log::red_bg << "listen error" << Log::nl;
-        throw std::runtime_error(std::strerror(errno));
+        fcntl(fd, F_SETFL, O_NONBLOCK);  // non blocking for macos
     }
 
+    // binds it
+    {
+        sockaddr_in addr;
+        std::memset(&addr, 0, sizeof(addr));  // zero — there are padding fields
+        addr.sin_family = AF_INET;            // must match socket()'s domain
+        addr.sin_port = htons(port);          // network byte order
+        if (host.empty() || host == "0.0.0.0")
+            addr.sin_addr.s_addr = htonl(INADDR_ANY);  // all interfaces
+        else
+            addr.sin_addr.s_addr = inet_addr(host.c_str());  // specific IP
+
+        if (bind(fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
+            close(fd);
+            std::cerr << Log::red_bg << "bind error" << Log::nl;
+            throw std::runtime_error(std::strerror(errno));
+        }
+    }
+
+    // listen
+    {
+        const int MAX_CONNEXION = 10;
+        if (listen(fd, MAX_CONNEXION) < 0) {
+            close(fd);
+            std::cerr << Log::red_bg << "listen error" << Log::nl;
+            throw std::runtime_error(std::strerror(errno));
+        }
+    }
     return fd;
 }
 
@@ -96,7 +108,7 @@ Server::~Server() {
 // events  = your question  → "is this fd readable? writable?"
 // revents = the answer     → "yes readable / yes writable / hung up / error"
 void Server::run() {
-    log_event("SERVER RUNNING");
+    log_event("Server running...");
     while (!webserv::g_stop) {
         // poll will set all the revents to 0, then
         // poll will BLOCK the process until an event triggers it
@@ -198,7 +210,7 @@ void Server::accept_new_connexion(int listen_fd) {
         c->remote_addr = utils::to_str((ip >> 24) & 0xFF) + "." +
                          utils::to_str((ip >> 16) & 0xFF) + "." +
                          utils::to_str((ip >> 8) & 0xFF) + "." + utils::to_str(ip & 0xFF);
-        log_event("NEW Client Socket FD: " + utils::to_str(c->fd));
+        log_event("NEW Connexion Socket FD: " + utils::to_str(c->fd));
     } catch (const std::exception& e) {
         log_error(std::string("accept error: ") + e.what());
         return;
@@ -214,7 +226,7 @@ void Server::accept_new_connexion(int listen_fd) {
 void Server::drop_connexion(Connexion* c) {
     int fd = c->fd;
     _connexions.erase(fd);
-    log_event("CLOSED Client Socket FD: " + utils::to_str(c->fd));
+    log_event("CLOSED Connexion Socket FD: " + utils::to_str(c->fd));
     delete c;  // destructor closes the fd
     for (size_t i = 0; i < _pollfds.size(); i++) {
         if (_pollfds[i].fd == fd) {
@@ -237,7 +249,17 @@ void Server::drop_connexion(Connexion* c) {
 
 void Server::log_info(std::string s) { std::cout << Log::color(0) << s << Log::nl; }
 
-void Server::log_event(std::string s) { std::cout << Log::background(0) << s << Log::nl; }
+void Server::log_event(std::string s) {
+    // lets do rainbow color
+    std::string bg = "\033[48;5;231m";
+    std::cout << bg << "[" << Log::timestamp() << "] " << Log::bold;
+    for (size_t i = 0; i < s.size(); ++i) {
+        std::cout << Log::gradient(i % 32);
+        // std::cout << Log::background(i * 3 + 1);
+        std::cout << s[i];
+    }
+    std::cout << Log::nl;
+}
 
 void Server::log_error(std::string s) { Log::error(s); }
 

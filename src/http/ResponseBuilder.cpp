@@ -1,6 +1,4 @@
 #include "ResponseBuilder.hpp"
-#include "../utils/Log.hpp"
-#include "../utils/Utils.hpp"
 
 #include <dirent.h>
 #include <unistd.h>
@@ -9,6 +7,9 @@
 #include <cstdio>
 #include <cstring>
 #include <sstream>
+
+#include "../utils/Log.hpp"
+#include "../utils/Utils.hpp"
 
 namespace {
 std::string reason_phrase(int status_code) {
@@ -120,6 +121,21 @@ bool path_matches(const std::string& uri, const std::string& path) {
     if (uri.size() == path.size()) return true;     // exact match
     if (path[path.size() - 1] == '/') return true;  // path already ends at a separator
     return uri[path.size()] == '/';                 // real segment boundary
+}
+
+// Capitalize an HTTP header name: first letter and every letter following a
+// '-' is upper-cased, the rest lower-cased. e.g. "content-type" -> "Content-Type".
+std::string capitalize_header(std::string s) {
+    bool at_word_start = true;
+    for (size_t i = 0; i < s.size(); ++i) {
+        unsigned char c = static_cast<unsigned char>(s[i]);
+        if (at_word_start)
+            s[i] = static_cast<char>(std::toupper(c));
+        else
+            s[i] = static_cast<char>(std::tolower(c));
+        at_word_start = (s[i] == '-');
+    }
+    return s;
 }
 }  // namespace
 
@@ -353,7 +369,7 @@ std::string ResponseBuilder::build() {
     std::ostringstream oss;
     oss << protocol << " " << status_code << " " << reason_phrase(status_code) << "\r\n";
     for (t_dict::const_iterator it = header.begin(); it != header.end(); ++it) {
-        oss << utils::capitalize_header(it->first) << ": " << it->second << "\r\n";
+        oss << capitalize_header(it->first) << ": " << it->second << "\r\n";
     }
     oss << "\r\n";
     oss << body;

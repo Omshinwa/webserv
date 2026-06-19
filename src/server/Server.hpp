@@ -25,7 +25,7 @@ class Server {
         std::vector<pollfd> _pollfds;           // list of all the poll requests
         std::map<int, Connexion*> _connexions;  // int fd -> Connexion*
 
-        int create_socket(const std::string& host, int port);
+        static int create_socket(const std::string& host, int port);
         void append_to_poll(int fd);
         void accept_new_connexion(int listen_fd);
         void drop_connexion(Connexion* c);

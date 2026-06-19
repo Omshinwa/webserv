@@ -1,7 +1,4 @@
 #include "CgiProcess.hpp"
-#include "../utils/Log.hpp"
-#include "../utils/Utils.hpp"
-#include "RequestParser.hpp"
 
 #include <sys/wait.h>
 #include <unistd.h>
@@ -14,6 +11,10 @@
 #include <iostream>
 #include <map>
 #include <vector>
+
+#include "../utils/Log.hpp"
+#include "../utils/Utils.hpp"
+#include "RequestParser.hpp"
 
 namespace {
 
@@ -148,8 +149,8 @@ CgiProcess::CgiProcess(const RequestParser& req, const ServerConfig& config,
     pid_t pid;
     int in_fd[2];
 
-    Log::debug("interpreter:" + interpreter);
-    Log::debug("script path:" + script_path);
+    Log::event("CGI request");
+    Log::debug("interpreter: [" + interpreter + "] script path: [" + script_path + "]");
     pipe(fd);
     pipe(in_fd);
     pid = fork();
@@ -168,11 +169,9 @@ CgiProcess::CgiProcess(const RequestParser& req, const ServerConfig& config,
         ssize_t n;
         while ((n = read(fd[0], buf, sizeof(buf))) > 0) output.append(buf, n);
 
-        Log::debug("CGI generated:");
         if (output.size() > 150)  // we only display up to 150 chars in the debug
         {
-            Log::debug(output.substr(0, 150));
-            Log::debug("...");
+            Log::debug(output.substr(0, 150) + "\n...");
         } else
             Log::debug(output);
 

@@ -1,12 +1,12 @@
 
-#include "Utils.hpp"
-
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
 #include <cctype>
 #include <cstdlib>
+
+#include "Utils.hpp"
 
 // STRING UTILS
 namespace utils {
@@ -78,41 +78,4 @@ bool ends_with(const std::string& s, const std::string& suffix) {
     }
     return true;
 }
-
-// specific utils
-
-// Capitalize an HTTP header name: first letter and every letter following a
-// '-' is upper-cased, the rest lower-cased. e.g. "content-type" -> "Content-Type".
-std::string capitalize_header(std::string s) {
-    bool at_word_start = true;
-    for (size_t i = 0; i < s.size(); ++i) {
-        unsigned char c = static_cast<unsigned char>(s[i]);
-        if (at_word_start)
-            s[i] = static_cast<char>(std::toupper(c));
-        else
-            s[i] = static_cast<char>(std::tolower(c));
-        at_word_start = (s[i] == '-');
-    }
-    return s;
-}
-
-// parse a single line in a http header
-// from "Content-Length: 50"
-// -> header[content-length] = 50
-bool parse_http_header_line(const std::string& line, std::string& key,
-                            std::string& value) {
-    // std::string key, value;
-
-    size_t colon_pos = line.find(':');
-    if (colon_pos == std::string::npos) return false;
-    key = line.substr(0, colon_pos);
-    value = line.substr(colon_pos + 1);
-    // if theres a space in the key = ERROR
-    if (key.find_first_of(" ") != std::string::npos) return false;
-
-    key = utils::to_lower(key);
-    value = utils::trim(value);
-    return true;
-}
-
 }  // namespace utils

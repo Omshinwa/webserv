@@ -1,11 +1,12 @@
 #include "RequestParser.hpp"
-#include "../utils/Log.hpp"
-#include "../utils/Utils.hpp"
 
 #include <cerrno>
 #include <cstdlib>
 #include <string>
 #include <vector>
+
+#include "../utils/Log.hpp"
+#include "../utils/Utils.hpp"
 
 namespace {
 // Just checking that its a valid positive number
@@ -37,7 +38,7 @@ RequestParser::RequestParser(std::string& buffer)
     Log::debug("Request Parser Creation");
 }
 
-RequestParser::~RequestParser() { Log::debug("Request Parser Destructor"); }
+RequestParser::~RequestParser() {}
 
 ///
 
@@ -103,9 +104,9 @@ void RequestParser::parse_header(std::string header_data, std::string delim) {
 
     // Parse Content-Length now if present
     if (header.find("content-length") == header.end()) {
-        Log::info("No content length!");
+        Log::debug("No content length!");
     } else {
-        Log::info("Content length: " + header["content-length"]);
+        Log::debug("Content length: " + header["content-length"]);
         if (!parse_size_t(header["content-length"].c_str(), content_length)) {
             state = ERROR;
             return;
@@ -113,7 +114,8 @@ void RequestParser::parse_header(std::string header_data, std::string delim) {
     }
 
     state = AWAITING_CONFIG;
-    Log::event("HEADER OK");
+    Log::debug("HEADER OK");
+    Log::event("< " + method + " " + URI + " " + get_header("host"));
 }
 
 void RequestParser::parse() {

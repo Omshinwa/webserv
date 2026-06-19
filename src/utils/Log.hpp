@@ -19,22 +19,22 @@ class Log {
         static int color_idx;
 
         static const std::string red;
-        static const std::string green;
-        static const std::string yellow;
-        static const std::string blue;
-        static const std::string magenta;
-        static const std::string cyan;
-        static const std::string white;
-        static const std::string black;
+        // static const std::string green;
+        // static const std::string yellow;
+        // static const std::string blue;
+        // static const std::string magenta;
+        // static const std::string cyan;
+        // static const std::string white;
+        // static const std::string black;
 
         static const std::string red_bg;
-        static const std::string green_bg;
-        static const std::string yellow_bg;
-        static const std::string blue_bg;
-        static const std::string magenta_bg;
-        static const std::string cyan_bg;
-        static const std::string white_bg;
-        static const std::string black_bg;
+        // static const std::string green_bg;
+        // static const std::string yellow_bg;
+        // static const std::string blue_bg;
+        // static const std::string magenta_bg;
+        // static const std::string cyan_bg;
+        // static const std::string white_bg;
+        // static const std::string black_bg;
 
         static const std::string bold;
         static const std::string underline;
@@ -44,8 +44,11 @@ class Log {
 
         static const std::string color(int n);
         static const std::string background(int n);
+        static const std::string gradient(int x, bool is_bg = 0);
 
-        static std::string rgb_to_ansi(int r, int g, int b);
+        static std::string rgb_to_ansi(int r, int g, int b, bool is_bg = 0);
+
+        static std::string timestamp();
 
         static void set_level(Level lvl);
         static void debug(const std::string& s);

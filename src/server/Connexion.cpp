@@ -1,14 +1,15 @@
 
 #include "Connexion.hpp"
-#include "../utils/Log.hpp"
-#include "../utils/Utils.hpp"
-#include "../http/ResponseBuilder.hpp"
 
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
 #include <cstring>
+
+#include "../http/ResponseBuilder.hpp"
+#include "../utils/Log.hpp"
+#include "../utils/Utils.hpp"
 
 // Connexion handles the buffers for reading and writing
 // It creates the Request and Response
@@ -23,7 +24,6 @@ Connexion::Connexion(int fd, const std::vector<ServerConfig>& configs)
 }
 
 Connexion::~Connexion() {
-    Log::debug("~Destructor Connexion fd " + utils::to_str(fd));
     if (fd >= 0) close(fd);
 }
 
@@ -37,8 +37,8 @@ void Connexion::do_recv() {
     if (n > 0) {
         buf[n] = '\0';
         _recv_buf.append(buf, n);
-        log_event("<    RECEIVED file descriptor " + utils::to_str(fd) + ":");
-        log_info(buf);
+        log_info("< RECEIVED file descriptor " + utils::to_str(fd) + ":");
+        log_debug(buf);
         request.parse();
 
         // Once the header is parsed the parser enters AWAITING_CONFIG: the Host
@@ -86,7 +86,7 @@ ssize_t Connexion::do_send() {
 
     ssize_t n = send(fd, buf, left, 0);
     if (n > 0) {
-        log_event(">    SENT to file descriptor " + utils::to_str(fd));
+        log_event("> SENT to file descriptor " + utils::to_str(fd));
         log_info(buf);
 
         _send_offset += n;  // update the offset buffer
@@ -130,11 +130,17 @@ const ServerConfig& Connexion::resolve_virtual_host(const std::string& host) con
 //
 //
 
+void Connexion::log_debug(std::string s) {
+    Log::color_idx = fd;
+    if (s.size() > 200) {  // only display the first 200 characters
+        Log::debug(s.substr(0, 200) + "\n...");
+    } else
+        Log::debug(s);
+}
 void Connexion::log_info(std::string s) {
     Log::color_idx = fd;
     if (s.size() > 200) {  // only display the first 200 characters
-        Log::info(s.substr(0, 200));
-        Log::info("...");
+        Log::info(s.substr(0, 200) + "\n...");
     } else
         Log::info(s);
 }

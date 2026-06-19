@@ -1,10 +1,32 @@
 
+#include <cstring>
+
 #include "../utils/Utils.hpp"
 #include "CgiProcess.hpp"
 #include "RequestParser.hpp"
 #include "ResponseBuilder.hpp"
 
-#include <cstring>
+namespace {
+// parse a single line in a http header
+// from "Content-Length: 50"
+// -> header[content-length] = 50
+bool parse_http_header_line(const std::string& line, std::string& key,
+                            std::string& value) {
+    // std::string key, value;
+
+    size_t colon_pos = line.find(':');
+    if (colon_pos == std::string::npos) return false;
+    key = line.substr(0, colon_pos);
+    value = line.substr(colon_pos + 1);
+    // if theres a space in the key = ERROR
+    if (key.find_first_of(" ") != std::string::npos) return false;
+
+    key = utils::to_lower(key);
+    value = utils::trim(value);
+    return true;
+}
+
+}  // namespace
 
 // BORING FUNCTION TO PARSE THE CGI RESPONSE LIKE WE DID FOR THE REQUEST
 void ResponseBuilder::parse_cgi_response(std::string raw) {
@@ -26,7 +48,7 @@ void ResponseBuilder::parse_cgi_response(std::string raw) {
 
     for (size_t i = 0; i < lines.size(); ++i) {
         std::string k, v;
-        if (utils::parse_http_header_line(lines[i], k, v)) header[k] = v;
+        if (parse_http_header_line(lines[i], k, v)) header[k] = v;
     }
 
     // 3. body is just the rest
