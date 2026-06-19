@@ -1,13 +1,12 @@
 #ifndef CGIPROCESS_H
 #define CGIPROCESS_H
 
-#include "../config/Config.hpp"
-#include "RequestParser.hpp"
-
 #include <unistd.h>
 
 #include <string>
 
+#include "../config/Config.hpp"
+#include "RequestParser.hpp"
 
 class CgiProcess {
     public:

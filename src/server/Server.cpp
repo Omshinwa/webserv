@@ -1,8 +1,4 @@
 #include "Server.hpp"
-#include "../utils/Log.hpp"
-#include "../utils/Utils.hpp"
-#include "Connexion.hpp"
-#include "signal.hpp"
 
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -13,6 +9,11 @@
 #include <cstring>
 #include <iostream>
 #include <stdexcept>
+
+#include "../utils/Log.hpp"
+#include "../utils/Utils.hpp"
+#include "Connexion.hpp"
+#include "signal.hpp"
 
 // Group the configs by host:port; each unique pair gets one listening socket,
 // and the configs sharing it become its virtual hosts.

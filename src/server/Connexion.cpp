@@ -1,14 +1,15 @@
 
 #include "Connexion.hpp"
-#include "../utils/Log.hpp"
-#include "../utils/Utils.hpp"
-#include "../http/ResponseBuilder.hpp"
 
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
 #include <cstring>
+
+#include "../http/ResponseBuilder.hpp"
+#include "../utils/Log.hpp"
+#include "../utils/Utils.hpp"
 
 // Connexion handles the buffers for reading and writing
 // It creates the Request and Response

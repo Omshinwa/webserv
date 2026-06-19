@@ -1,14 +1,14 @@
 #ifndef CONNEXION_HPP
 #define CONNEXION_HPP
 
-#include "../config/Config.hpp"
-#include "../http/RequestParser.hpp"
-
 #include <netinet/in.h>
 #include <sys/types.h>
 
 #include <string>
 #include <vector>
+
+#include "../config/Config.hpp"
+#include "../http/RequestParser.hpp"
 
 class Connexion {
     public:

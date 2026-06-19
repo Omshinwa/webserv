@@ -1,10 +1,10 @@
 #ifndef REQUESTPARSER_H
 #define REQUESTPARSER_H
 
-#include "../config/Config.hpp"
-
 #include <map>
 #include <string>
+
+#include "../config/Config.hpp"
 
 typedef std::map<std::string, std::string> t_dict;
 

@@ -1,6 +1,4 @@
 #include "ResponseBuilder.hpp"
-#include "../utils/Log.hpp"
-#include "../utils/Utils.hpp"
 
 #include <dirent.h>
 #include <unistd.h>
@@ -9,6 +7,9 @@
 #include <cstdio>
 #include <cstring>
 #include <sstream>
+
+#include "../utils/Log.hpp"
+#include "../utils/Utils.hpp"
 
 namespace {
 std::string reason_phrase(int status_code) {

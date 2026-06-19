@@ -1,12 +1,12 @@
 
-#include "Utils.hpp"
-
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
 #include <cctype>
 #include <cstdlib>
+
+#include "Utils.hpp"
 
 // STRING UTILS
 namespace utils {

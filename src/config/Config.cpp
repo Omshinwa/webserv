@@ -1,7 +1,8 @@
 #include "./Config.hpp"
-#include "../utils/Utils.hpp"
 
 #include <set>
+
+#include "../utils/Utils.hpp"
 
 LocationConfig::LocationConfig()
         : autoindex(false),
