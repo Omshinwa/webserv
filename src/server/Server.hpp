@@ -1,14 +1,14 @@
 #ifndef SERVER_HPP
 #define SERVER_HPP
 
-#include "../config/Config.hpp"
-
 #include <netinet/in.h>
 #include <poll.h>
 
 #include <map>
 #include <string>
 #include <vector>
+
+#include "../config/Config.hpp"
 
 class Connexion;
 

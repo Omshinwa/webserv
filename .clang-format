@@ -9,7 +9,7 @@
 
 BasedOnStyle: Google
 Language: Cpp
-Standard: c++17
+Standard: c++03
 
 # ---------------------------------------------------------------------------
 # Indentation et largeur — VARIANTE 4 ESPACES
