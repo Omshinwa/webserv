@@ -64,12 +64,8 @@ class Tokenizer {
 
             while (_pos < _src.size()) {
                 char c = _src[_pos];
-                if (c == '\n') {
-                    ++_line;
-                    ++_pos;
-                    continue;
-                }
                 if (std::isspace(static_cast<unsigned char>(c))) {
+                    if (c == '\n') ++_line;
                     ++_pos;
                     continue;
                 }
@@ -155,7 +151,8 @@ class Parser {
                     loc.index = args[0];
                     loc.has_index = true;
                 } else if (name == "autoindex") {
-                    if (args.size() != 1) fail("'autoindex' expects 'on' or 'off'");
+                    if (args.size() != 1 || (args[0] != "on" && args[0] != "off"))
+                        fail("'autoindex' expects 'on' or 'off'");
                     loc.autoindex = (args[0] == "on");
                     loc.has_autoindex = true;
                 } else if (name == "return" || name == "redirect") {
@@ -223,7 +220,8 @@ class Parser {
                         !utils::parse_size(args[0], srv.client_max_body_size))
                         fail("invalid client_max_body_size");
                 } else if (name == "autoindex") {
-                    if (args.size() != 1) fail("'autoindex' expects 'on' or 'off'");
+                    if (args.size() != 1 || (args[0] != "on" && args[0] != "off"))
+                        fail("'autoindex' expects 'on' or 'off'");
                     srv.autoindex = (args[0] == "on");
                 } else if (name == "error_page") {
                     if (args.size() < 2) fail("'error_page' expects codes and a path");
