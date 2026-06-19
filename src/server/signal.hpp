@@ -1,7 +1,8 @@
 #ifndef SIGNAL_H
 #define SIGNAL_H
 
-#include <signal.h>
+#include <csignal>
+
 namespace webserv {
 extern volatile sig_atomic_t g_stop;
 

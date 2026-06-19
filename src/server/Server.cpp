@@ -1,4 +1,8 @@
 #include "Server.hpp"
+#include "../utils/Log.hpp"
+#include "../utils/Utils.hpp"
+#include "Connexion.hpp"
+#include "signal.hpp"
 
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -9,15 +13,6 @@
 #include <cstring>
 #include <iostream>
 #include <stdexcept>
-
-#include "../utils/Log.hpp"
-#include "../utils/Utils.hpp"
-#include "Connexion.hpp"
-#include "signal.hpp"
-
-// Server::Server(const std::vector<ServerConfig>& configs) : _configs(configs) {}
-
-std::ostream& operator<<(std::ostream& os, const sockaddr_in& addr);
 
 // Group the configs by host:port; each unique pair gets one listening socket,
 // and the configs sharing it become its virtual hosts.
@@ -242,9 +237,7 @@ void Server::drop_connexion(Connexion* c) {
 
 void Server::log_info(std::string s) { std::cout << Log::color(0) << s << Log::nl; }
 
-void Server::log_event(std::string s) {
-    std::cout << Log::background(0) << s << Log::nl;
-}
+void Server::log_event(std::string s) { std::cout << Log::background(0) << s << Log::nl; }
 
 void Server::log_error(std::string s) { Log::error(s); }
 

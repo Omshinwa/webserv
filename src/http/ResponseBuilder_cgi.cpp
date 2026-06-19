@@ -1,12 +1,10 @@
-#include <cerrno>
-#include <cstring>
-#include <sstream>
 
-#include "../utils/Log.hpp"
 #include "../utils/Utils.hpp"
 #include "CgiProcess.hpp"
 #include "RequestParser.hpp"
 #include "ResponseBuilder.hpp"
+
+#include <cstring>
 
 // BORING FUNCTION TO PARSE THE CGI RESPONSE LIKE WE DID FOR THE REQUEST
 void ResponseBuilder::parse_cgi_response(std::string raw) {

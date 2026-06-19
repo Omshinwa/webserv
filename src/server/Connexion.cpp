@@ -1,21 +1,17 @@
 
 #include "Connexion.hpp"
+#include "../utils/Log.hpp"
+#include "../utils/Utils.hpp"
+#include "../http/ResponseBuilder.hpp"
 
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include <cerrno>
 #include <cstring>
-#include <iostream>
-#include <stdexcept>
-
-#include "../utils/Log.hpp"
-#include "../utils/Utils.hpp"
 
 // Connexion handles the buffers for reading and writing
 // It creates the Request and Response
-
 Connexion::Connexion(int fd, const std::vector<ServerConfig>& configs)
         : fd(fd),
           _state(READING),

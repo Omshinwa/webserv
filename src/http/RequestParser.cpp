@@ -1,13 +1,11 @@
 #include "RequestParser.hpp"
+#include "../utils/Log.hpp"
+#include "../utils/Utils.hpp"
 
 #include <cerrno>
 #include <cstdlib>
 #include <string>
 #include <vector>
-
-#include "../utils/Log.hpp"
-#include "../utils/Utils.hpp"
-#include "ResponseBuilder.hpp"
 
 namespace {
 // Just checking that its a valid positive number

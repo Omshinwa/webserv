@@ -1,4 +1,7 @@
 #include "CgiProcess.hpp"
+#include "../utils/Log.hpp"
+#include "../utils/Utils.hpp"
+#include "RequestParser.hpp"
 
 #include <sys/wait.h>
 #include <unistd.h>
@@ -11,10 +14,6 @@
 #include <iostream>
 #include <map>
 #include <vector>
-
-#include "../utils/Log.hpp"
-#include "../utils/Utils.hpp"
-#include "RequestParser.hpp"
 
 namespace {
 

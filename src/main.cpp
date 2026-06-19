@@ -1,9 +1,9 @@
-#include <iostream>
-
 #include "config/Config.hpp"
 #include "server/Server.hpp"
 #include "server/signal.hpp"
 #include "utils/Log.hpp"
+
+#include <iostream>
 
 int main(int ac, char** av) {
     if (ac > 2) {
