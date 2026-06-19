@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
 # The cgi and cgitb modules were deprecated in Python 3.11 (PEP 594)
-# and removed in Python 3.13, so we replicate what we need by hand:
-# print the CGI environment and any request body.
 import os
 import sys
 

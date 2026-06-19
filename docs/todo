@@ -1,6 +1,5 @@
 # Mandatory
 * cookies & session
-* handle multiple server config with different host:port
 
 * add CGI's fd to poll() * the fd will need to sit in the poll(), also Connexion needs to have a cgi_pid ? idk
 * test CGI that uses POST etc...

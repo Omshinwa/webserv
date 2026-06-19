@@ -4,6 +4,7 @@
 #include <unistd.h>
 
 #include <cerrno>
+#include <csignal>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -17,6 +18,11 @@
 #include "RequestParser.hpp"
 
 namespace {
+
+// A CGI script must never hang the (single-threaded) server. The child arms
+// alarm(CGI_TIMEOUT_SEC) on itself; if it overruns, the kernel kills it with
+// SIGALRM and we answer 504 Gateway Timeout.
+const unsigned int CGI_TIMEOUT_SEC = 3;
 
 // takes some text in http header format and converts it to
 // environment variables format
@@ -129,6 +135,11 @@ void child_fork(const RequestParser& req, const ServerConfig& config, int fd[2],
     close(in_fd[0]);
     close(in_fd[1]);
 
+    // self-destruct timer: if the script doesn't finish within the budget, the
+    // kernel delivers SIGALRM (default action: terminate). The timer survives
+    // execve, so it keeps ticking through the interpreter/script.
+    // alarm(CGI_TIMEOUT_SEC);
+
     child_execve(req, config, interpreter, script_path);
 }
 
@@ -138,6 +149,11 @@ int interpret_status(int status) {
         if (WEXITSTATUS(status) == 0) return 200;
         Log::debug("CGI returned -1 / error");
         return 502;
+    }
+    // our own alarm() fired and killed the runaway CGI -> Gateway Timeout
+    if (WIFSIGNALED(status) && WTERMSIG(status) == SIGALRM) {
+        Log::warning("CGI timed out (SIGALRM)");
+        return 504;
     }
     Log::debug("CGI signaled / killed");
     return 502;  // signaled / killed
@@ -165,6 +181,8 @@ CgiProcess::CgiProcess(const RequestParser& req, const ServerConfig& config,
         if (req.body.size()) write(in_fd[1], req.body.data(), req.body.size());
         close(in_fd[1]);
 
+        // The child armed alarm(CGI_TIMEOUT_SEC) on itself: if it hangs, the
+        // kernel kills it, which closes its stdout and unblocks the read below.
         char buf[2048];
         ssize_t n;
         while ((n = read(fd[0], buf, sizeof(buf))) > 0) output.append(buf, n);
@@ -176,8 +194,7 @@ CgiProcess::CgiProcess(const RequestParser& req, const ServerConfig& config,
             Log::debug(output);
 
         int status;
-        // pid_t r = waitpid(pid, &status, WNOHANG);
-        // WNOHANG = don't block if child not done
+        // the child is already dead or dying (alarm), so this won't block long
         if (waitpid(pid, &status, 0) == -1) {
             Log::error("WAITPID FAIL");
             Log::error(std::strerror(errno));
