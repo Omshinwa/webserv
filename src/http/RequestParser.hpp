@@ -26,9 +26,7 @@ class RequestParser {
 
         void set_config(const ServerConfig& cfg);
         std::string get_header(std::string s) const;
-        const t_dict& get_header_ref() const {
-            return header;
-        }  // cpp why do you force me to do this
+        const t_dict& get_header_ref() const { return header; }
 
         inline int get_status_code() const { return status_code; };
 
@@ -37,10 +35,6 @@ class RequestParser {
         std::string protocol;
         std::string body;
         std::string remote_addr;  // client IP, filled in by the Connexion
-
-        //
-        // // PRIVATE
-        //
 
     private:
         static const size_t MAX_HEADER_SIZE = 32000;
@@ -52,8 +46,6 @@ class RequestParser {
         // Resolved by the Connexion from the Host header; NULL until then.
         const ServerConfig* config;
 
-        //
-
         size_t content_length;  // parsed content length
 
         // A bunch of internal variables used to represent a request
@@ -63,9 +55,6 @@ class RequestParser {
         void parse_header(std::string header_data, std::string delim);
         void parse_start_line(std::string line);
         void parse_header_line(std::string line);
-
-        // LOG
-        void log_info(std::string s);
 
         // INACCESSIBLE
         RequestParser();
