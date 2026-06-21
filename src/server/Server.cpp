@@ -12,28 +12,20 @@
 #include <iostream>
 #include <stdexcept>
 
+#include "../event/IEventHandler.hpp"
 #include "../utils/Log.hpp"
 #include "../utils/Utils.hpp"
 #include "Connection.hpp"
-#include "../event/IEventHandler.hpp"
-#include "signal.hpp"
 
-// Group the configs by host:port; each unique pair gets one listening socket,
-// and the configs sharing it become its virtual hosts.
+// One Server owns one listening socket. `configs` are the server blocks that
+// share this host:port — i.e. the virtual hosts reachable through this socket.
+// The caller (group_by_host_port) guarantees they all share host:port, so the
+// first one defines the endpoint to bind.
 Server::Server(const std::vector<ServerConfig>& configs) : configs(configs) {
-    std::map<std::string, std::vector<ServerConfig> > groups;
-    for (size_t i = 0; i < configs.size(); i++) {
-        std::string key = configs[i].host + ":" + utils::to_str(configs[i].port);
-        groups[key].push_back(configs[i]);
-    }
-
-    for (std::map<std::string, std::vector<ServerConfig> >::iterator it = groups.begin();
-         it != groups.end(); ++it) {
-        const ServerConfig& first = it->second[0];
-        create_socket(first.host, first.port);
-        log_event("Server Listening to: " + first.host + ":" + utils::to_str(first.port) +
-                  ", fd:" + utils::to_str(fd));
-    }
+    const ServerConfig& first = configs[0];
+    create_socket(first.host, first.port);
+    log_event("Server Listening to: " + first.host + ":" + utils::to_str(first.port) +
+              ", fd:" + utils::to_str(fd));
 }
 
 // create socket -> nonblock -> bind -> listen
@@ -86,8 +78,8 @@ Server::~Server() {
     close(fd);  // listening fd
 }
 
-void Server::on_readable(int fd) { accept_new_connection(fd); }
-void Server::on_writable(int fd) { Log::error("This should never display"); }
+void Server::on_readable() { accept_new_connection(fd); }
+void Server::on_writable() { Log::error("This should never display"); }
 void Server::on_tick(time_t now) {
     (void)now;
     return;

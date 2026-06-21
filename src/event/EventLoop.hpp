@@ -45,7 +45,7 @@ class EventLoop {
         void unregister_fd(int fd);
 
     private:
-        std::map<int, IEventHandler&> fd_to_handler;
+        std::map<int, IEventHandler*> fd_to_handler;
         std::vector<pollfd> _pollfds;  // list of all the poll requests
 };
 

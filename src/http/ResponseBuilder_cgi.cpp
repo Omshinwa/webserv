@@ -30,7 +30,7 @@ bool parse_http_header_line(const std::string& line, std::string& key,
 
 // Construct the response from the CGI's output
 ResponseBuilder::ResponseBuilder(CgiHandler& handler) {
-    std::string raw = handler.buffer;
+    std::string raw = handler.read_buffer;
     // 1. find the header/body separator (tolerant, like you already do)
     size_t sep = raw.find("\r\n\r\n");
     std::string delim = "\r\n";

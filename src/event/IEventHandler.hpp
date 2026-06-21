@@ -29,12 +29,16 @@
 
 class IEventHandler {
     public:
+        IEventHandler() : finished(false) {}
         virtual ~IEventHandler() {}
-        virtual void on_readable(int fd) = 0;
-        virtual void on_writable(int fd) = 0;
+        virtual void on_readable() = 0;
+        virtual void on_writable() = 0;
         virtual void on_tick(time_t now) = 0;
 
-        bool finished = 0;  // is it done?
+        bool finished;  // is it done?
+
+        inline void touch() { _last_activity = time(NULL); }
+        time_t _last_activity;
 };
 
 #endif

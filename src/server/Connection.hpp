@@ -9,9 +9,9 @@
 #include <vector>
 
 #include "../config/Config.hpp"
-#include "../http/RequestParser.hpp"
-#include "../include.hpp"
 #include "../event/IEventHandler.hpp"
+#include "../http/RequestParser.hpp"
+#include "CgiHandler.hpp"
 
 typedef struct cgi_communication {
         std::string remote_addr;
@@ -32,8 +32,8 @@ class Connection : public IEventHandler {
 
         void touch();
 
-        void on_readable(int fd);
-        void on_writable(int fd);
+        void on_readable();
+        void on_writable();
         void on_tick(time_t now);
 
         // Once you've parsed a complete request, build the response and call this.

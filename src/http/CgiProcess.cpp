@@ -15,7 +15,6 @@
 
 #include "../utils/Log.hpp"
 #include "../utils/Utils.hpp"
-#include "RequestParser.hpp"
 
 namespace {
 

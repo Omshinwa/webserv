@@ -55,7 +55,11 @@
 
 // Log, Utils
 //    └─> Config
-//           └─> Request, Response
+//       └─> Request
+//          └─> CGIProcess
+//             └─> CGI Handler
+//
+//               Response
 //                  └─> Client
 //                         └─> Server
 //                                └─> Handler ──> Cgi

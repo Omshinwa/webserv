@@ -1,5 +1,7 @@
 #include "EventLoop.hpp"
 
+#include "../server/signal.hpp"
+
 namespace {
 const int POLL_TIMEOUT_MS = 3000;
 }  // namespace
@@ -17,6 +19,7 @@ void EventLoop::register_fd(int fd, int events, IEventHandler* handler) {
 // events  = your question  → "is this fd readable? writable?"
 // revents = the answer     → "yes readable / yes writable / hung up / error"
 void EventLoop::run() {
+    webserv::setup_signals();
     while (!webserv::g_stop) {
         // poll will set all the revents to 0, then
         // poll will BLOCK the process until an event triggers it
@@ -39,13 +42,14 @@ void EventLoop::run() {
 
         // Idle
         time_t now = time(NULL);
-        for (int i = 0; i < _pollfds.size(); ++i) {
-            int fd = _pollfds[i];
-            fd_to_handler[fd].on_tick(now);
+        for (size_t i = 0; i < _pollfds.size(); ++i) {
+            int fd = _pollfds[i].fd;
+            fd_to_handler[fd]->on_tick(now);
         }
 
-        for (int i = 0; i < _pollfds.size(); ++i) {
-            int fd = _pollfds[i].fd if (fd_to_handler[fd].finished) unregister_fd(fd);
+        for (size_t i = 0; i < _pollfds.size(); ++i) {
+            int fd = _pollfds[i].fd;
+            if (fd_to_handler[fd]->finished) unregister_fd(fd);
         }
     }
 }
@@ -64,11 +68,10 @@ void EventLoop::unregister_fd(int fd) {
 }
 
 void EventLoop::handle_event(pollfd& pfd) {
-    int fd = pfd.fd;
     IEventHandler* h = fd_to_handler[pfd.fd];
     int revents = pfd.revents;
-    if (revents & POLLIN) h->on_readable(fd);  // drains; read()==0 = graceful EOF
-    if (revents & POLLOUT) h->on_writable(fd);
+    if (revents & POLLIN) h->on_readable();  // drains; read()==0 = graceful EOF
+    if (revents & POLLOUT) h->on_writable();
     if (revents & (POLLERR | POLLNVAL))  // real breakage → abort / 502
         h->finished = true;
 }

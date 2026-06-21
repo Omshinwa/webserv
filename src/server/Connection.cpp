@@ -32,8 +32,8 @@ void Connection::touch() { _last_activity = time(NULL); }
 
 void Connection::on_tick(time_t now) {
     bool timed_out = (now - _last_activity > CONNECTION_TIMEOUT_SEC);
-    if (timed_out(now, CONNECTION_TIMEOUT_SEC)) {
-        log_event("TIMEOUT Connection Socket FD: " + utils::to_str(c->fd));
+    if (timed_out) {
+        log_event("TIMEOUT Connection Socket FD: " + utils::to_str(fd));
         finished = true;
     }
 }
@@ -100,10 +100,10 @@ void Connection::on_writable() {
 
         _send_offset += n;  // update the offset buffer
         if (_send_offset >= _send_buf.size())
-            _state = CLOSING;  // HTTP/1.0-style: close after response
+            finished = true;  // HTTP/1.0-style: close after response
     }
 
-    if (n < 0) _state = CLOSING;
+    if (n < 0) finished = true;
 }
 
 void Connection::queue_response() {
@@ -115,17 +115,17 @@ void Connection::queue_response() {
 
     // is it running a CGI?
     if (response.waiting_for_cgi) {
-        _state = CGI_RUNNING;
+        // _state = CGI_RUNNING;
         return;
     }
     on_cgi_done();
 }
 
 void Connection::on_cgi_done() {
-    ResponseBuilder response(cgi.buffer);
+    ResponseBuilder response(cgi);
     _send_buf = response.build();
     _send_offset = 0;
-    _state = WRITING;
+    finished = true;
 }
 
 const ServerConfig& Connection::resolve_virtual_host(const std::string& host) const {

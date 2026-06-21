@@ -4,7 +4,6 @@
 #include <netinet/in.h>
 #include <poll.h>
 
-#include <map>
 #include <string>
 #include <vector>
 
@@ -13,13 +12,13 @@
 
 class Connection;
 
-class Server {
+class Server : public IEventHandler {
     public:
         Server(const std::vector<ServerConfig>& configs);
         ~Server();
 
-        void on_readable(int fd);
-        void on_writable(int fd);
+        void on_readable();
+        void on_writable();
         void on_tick(time_t now);
 
         int fd;

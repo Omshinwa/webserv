@@ -2,7 +2,7 @@
 #define RESPONSEBUILDER_H
 
 #include "../config/Config.hpp"
-#include "../include.hpp"
+#include "../server/CgiHandler.hpp"
 #include "RequestParser.hpp"
 
 // Status-Line = HTTP-Version SP Status-Code SP Reason-Phrase CRLF
@@ -13,7 +13,7 @@ class ResponseBuilder {
         ~ResponseBuilder() {};
 
         std::string build();
-        bool waiting_for_cgi = 0;
+        bool waiting_for_cgi;
 
     private:
         std::string protocol;

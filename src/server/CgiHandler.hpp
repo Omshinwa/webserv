@@ -14,10 +14,12 @@
 #include <map>
 #include <vector>
 
-#include "../include.hpp"
-#include "../utils/Log.hpp"
-#include "Connection.hpp"
 #include "../event/IEventHandler.hpp"
+#include "../http/CgiProcess.hpp"
+#include "../utils/Log.hpp"
+#include "../utils/Utils.hpp"
+
+class Connection;
 
 class CgiHandler : public IEventHandler {
     public:
@@ -27,12 +29,13 @@ class CgiHandler : public IEventHandler {
         CgiProcess cgi;
         Connection* _owner;  // who to notify on completion
 
-        void on_readable(int fd);
+        void on_readable();
         // read pipe; on EOF -> _owner->on_cgi_done(output, status)
-        void on_writable(int fd);
-        void on_hangup(int fd);
+        void on_writable();
+        void on_tick(time_t now);
 
-        std::string buffer;
+        std::string write_buffer;
+        std::string read_buffer;
 };
 
 #endif
