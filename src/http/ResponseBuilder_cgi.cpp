@@ -28,9 +28,16 @@ bool parse_http_header_line(const std::string& line, std::string& key,
 
 }  // namespace
 
-// Construct the response from the CGI's output
+// Construct the response from a finished CGI handler.
 ResponseBuilder::ResponseBuilder(CgiHandler& handler)
         : waiting_for_cgi(false), protocol("HTTP/1.0"), location(NULL) {
+    header["connection"] = "close";
+    // fork/pipe failed, the script crashed (502), or it timed out (504):
+    // build() turns the >= 400 status into an error page.
+    if (handler.cgi.exec_status >= 400) {
+        status_code = handler.cgi.exec_status;
+        return;
+    }
     parse_cgi_response(handler.read_buffer);
 }
 
@@ -91,11 +98,14 @@ bool ResponseBuilder::handle_cgi(const RequestParser& req, const ServerConfig& c
     }
     if (interpreter == NULL) return false;
     // note: the interpreter can be equal to the empty string
+    (void)req;
+    (void)config;
 
-    CgiProcess cgi(req, config, *interpreter, filepath);
-    if (cgi.exec_status >= 400)
-        status_code = cgi.exec_status;
-    else
-        parse_cgi_response(cgi.output);
+    // Don't run it here — that would block the event loop. Flag the request as
+    // CGI and stash what's needed; Connection::queue_response() forks the script
+    // and registers its pipes so the loop drives it asynchronously.
+    waiting_for_cgi = true;
+    cgi_interpreter = *interpreter;
+    cgi_filepath = filepath;
     return true;
 }

@@ -29,13 +29,19 @@ class CgiHandler : public IEventHandler {
         CgiProcess cgi;
         Connection* _owner;  // who to notify on completion
 
-        void on_readable();
-        // read pipe; on EOF -> _owner->on_cgi_done(output, status)
-        void on_writable();
+        void on_readable();  // drain stdout; on EOF reap + notify the Connection
+        void on_writable();  // feed stdin from write_buffer, then close it (EOF)
         void on_tick(time_t now);
 
         std::string write_buffer;
         std::string read_buffer;
+
+    private:
+        // Close the child's stdin and stop polling the write end.
+        void finish_writing();
+        // CGI is done (EOF, error, or timeout): pull our pipes out of the loop
+        // and hand the result back to the Connection via on_cgi_done().
+        void complete();
 };
 
 #endif

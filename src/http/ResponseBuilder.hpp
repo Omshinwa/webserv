@@ -14,6 +14,10 @@ class ResponseBuilder {
 
         std::string build();
         bool waiting_for_cgi;
+        // Set alongside waiting_for_cgi: which script the Connection should spawn.
+        // The fork/exec itself is driven asynchronously by CgiHandler.
+        std::string cgi_interpreter;
+        std::string cgi_filepath;
 
     private:
         std::string protocol;

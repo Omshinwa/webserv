@@ -103,8 +103,9 @@ void Server::accept_new_connection(int listen_fd) {
         c->remote_addr = utils::to_str((ip >> 24) & 0xFF) + "." +
                          utils::to_str((ip >> 16) & 0xFF) + "." +
                          utils::to_str((ip >> 8) & 0xFF) + "." + utils::to_str(ip & 0xFF);
-        // Hand the new client fd to the loop so it actually gets polled.
-        event_loop.register_fd(c->fd, POLLIN, c);
+        // Hand the new client fd to the loop so it actually gets polled. The
+        // loop owns the Connection now: it deletes it once it's finished.
+        event_loop.register_fd(c->fd, POLLIN, c, true);
         log_event("NEW Connection Socket FD: " + utils::to_str(c->fd));
     } catch (const std::exception& e) {
         log_error(std::string("accept error: ") + e.what());

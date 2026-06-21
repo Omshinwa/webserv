@@ -32,11 +32,25 @@ Connection::Connection(EventLoop& event_loop, int fd,
     fcntl(fd, F_SETFL, O_NONBLOCK);
 }
 
-Connection::~Connection() { delete cgi; }
+Connection::~Connection() {
+    if (!cgi) return;
+    // If the client vanished mid-request the CGI may still be registered and the
+    // child still running: pull any live pipes out of the loop and make sure the
+    // child is gone before freeing the handler. All of these are no-ops once the
+    // CGI completed normally (fds are -1, pid is -1).
+    if (cgi->cgi.fd[0] != -1) event_loop.unregister_fd(cgi->cgi.fd[0]);
+    if (cgi->cgi.in_fd[1] != -1) event_loop.unregister_fd(cgi->cgi.in_fd[1]);
+    cgi->cgi.kill_child();
+    delete cgi;
+}
 
 void Connection::touch() { _last_activity = time(NULL); }
 
 void Connection::on_tick(time_t now) {
+    // While a CGI is in flight the socket is parked; the CgiHandler runs its own
+    // timeout, so don't also trip the idle-connection timeout here.
+    if (cgi && !cgi->finished) return;
+
     bool timed_out = (now - _last_activity > CONNECTION_TIMEOUT_SEC);
     if (timed_out) {
         log_event("TIMEOUT Connection Socket FD: " + utils::to_str(fd));
@@ -119,9 +133,10 @@ void Connection::queue_response() {
     request.remote_addr = remote_addr;
     ResponseBuilder response(request, config);
 
-    // Async CGI: the CgiHandler will call on_cgi_done() once the script exits.
-    // (Currently dormant — CGI runs synchronously inside ResponseBuilder.)
+    // Async CGI: hand off to the event loop. The CgiHandler will call
+    // on_cgi_done() once the script exits; nothing here blocks.
     if (response.waiting_for_cgi) {
+        start_cgi(response.cgi_interpreter, response.cgi_filepath, config);
         return;
     }
 
@@ -132,7 +147,31 @@ void Connection::queue_response() {
     event_loop.set_events(fd, POLLOUT);
 }
 
+void Connection::start_cgi(const std::string& interpreter, const std::string& filepath,
+                           const ServerConfig& config) {
+    delete cgi;
+    cgi = new CgiHandler(event_loop, request, config, interpreter, filepath);
+    cgi->_owner = this;
+
+    // fork()/pipe() failed -> answer immediately (exec_status is a 5xx).
+    if (cgi->cgi.exec_status >= 400) {
+        on_cgi_done();
+        return;
+    }
+
+    // Poll both pipe ends: read the script's stdout, write its stdin. The client
+    // socket goes idle (events 0) until the CGI completes; CgiHandler drives the
+    // rest and calls back into on_cgi_done().
+    event_loop.register_fd(cgi->cgi.fd[0], POLLIN, cgi);
+    event_loop.register_fd(cgi->cgi.in_fd[1], POLLOUT, cgi);
+    event_loop.set_events(fd, 0);
+}
+
 void Connection::on_cgi_done() {
+    // Getting the CGI result counts as activity: refresh the idle timer so the
+    // connection gets a fresh window to send the response (the CGI may have used
+    // up most of the original one, and on_tick must not now reap us mid-send).
+    touch();
     ResponseBuilder response(*cgi);
     _send_buf = response.build();
     _send_offset = 0;

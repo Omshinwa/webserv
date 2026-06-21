@@ -14,15 +14,21 @@ class CgiProcess {
         state state;
         CgiProcess(const RequestParser& req, const ServerConfig& config,
                    const std::string& interpreter, const std::string& script_path);
-        std::string output;
+        // EOF on the child's stdout -> reap it and turn the exit status into an
+        // HTTP status (200 / 502 / 504), stored in exec_status. Clears pid.
+        void reap();
+        // Force-kill a still-running child and reap it. No-op once pid is -1, so
+        // it is safe to call again during teardown.
+        void kill_child();
+
         int exec_status;
         const RequestParser& req;
         const ServerConfig& config;
-        const std::string& interpreter;
-        const std::string& script_path;
+        std::string interpreter;
+        std::string script_path;
         pid_t pid;
-        int fd[2];
-        int in_fd[2];
+        int fd[2];     // parent reads the child's stdout from fd[0]
+        int in_fd[2];  // parent writes the child's stdin to in_fd[1]
         //
         // // private
         //

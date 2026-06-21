@@ -11,6 +11,7 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <set>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -41,7 +42,11 @@ class EventLoop {
         void run();
         void handle_event(pollfd& pfd);
 
-        void register_fd(int fd, int events, IEventHandler* handler);
+        // `owned` hands the handler's lifetime to the loop: once it is finished
+        // and none of its fds remain registered, the loop deletes it. Pass false
+        // for handlers someone else owns (the Servers live in main; a CgiHandler
+        // is owned by its Connection).
+        void register_fd(int fd, int events, IEventHandler* handler, bool owned = false);
         void unregister_fd(int fd);
         // Change what an already-registered fd is polled for, e.g. switch from
         // waiting on POLLIN (reading a request) to POLLOUT (sending a response).
@@ -49,7 +54,11 @@ class EventLoop {
 
     private:
         std::map<int, IEventHandler*> fd_to_handler;
-        std::vector<pollfd> _pollfds;  // list of all the poll requests
+        std::vector<pollfd> _pollfds;       // list of all the poll requests
+        std::set<IEventHandler*> _owned;    // handlers the loop will delete
+
+        // Does any still-registered fd map to this handler?
+        bool has_registered_fd(IEventHandler* h) const;
 };
 
 #endif

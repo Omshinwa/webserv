@@ -235,6 +235,12 @@ void ResponseBuilder::handle_get(RequestParser& req, const ServerConfig& config)
 
 void ResponseBuilder::handle_post(RequestParser& req, const ServerConfig& config) {
     const std::string& root = location->has_root ? location->root : config.root;
+
+    // POST to an existing CGI script runs it (the body is piped to the script's
+    // stdin) rather than treating the request as a file upload.
+    std::string script_path = utils::join_path(root, req.URI);
+    if (utils::is_regular_file(script_path) && handle_cgi(req, config, script_path)) return;
+
     std::string upload_path;
 
     if (location->has_upload) {

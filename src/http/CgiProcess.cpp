@@ -1,5 +1,6 @@
 #include "CgiProcess.hpp"
 
+#include <fcntl.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -17,11 +18,6 @@
 #include "../utils/Utils.hpp"
 
 namespace {
-
-// A CGI script must never hang the (single-threaded) server. The child arms
-// alarm(CGI_TIMEOUT_SEC) on itself; if it overruns, the kernel kills it with
-// SIGALRM and we answer 504 Gateway Timeout.
-const unsigned int CGI_TIMEOUT_SEC = 3;
 
 // takes some text in http header format and converts it to
 // environment variables format
@@ -57,51 +53,66 @@ CgiProcess::CgiProcess(const RequestParser& req, const ServerConfig& config,
         : req(req), config(config), interpreter(interpreter), script_path(script_path) {
     Log::event("CGI request");
     Log::debug("interpreter: [" + interpreter + "] script path: [" + script_path + "]");
-    pipe(fd);
-    pipe(in_fd);
+    exec_status = 0;
+    pid = -1;
+
+    if (pipe(fd) == -1 || pipe(in_fd) == -1) {
+        Log::error("CGI pipe FAIL");
+        Log::error(std::strerror(errno));
+        exec_status = 500;
+        return;
+    }
+
+    // Flush before forking so the child doesn't inherit (and re-emit) our
+    // buffered log output when it flushes stdout in child_fork().
+    std::cout << std::flush;
     pid = fork();
     if (pid == 0) {
-        child_fork();
-    } else if (pid > 0)  // parent
-    {
+        child_fork();  // never returns
+    } else if (pid > 0) {
+        // Parent keeps fd[0] (reads the child's stdout) and in_fd[1] (writes the
+        // child's stdin); the matching ends belong to the child. Both kept ends
+        // go non-blocking so the event loop can drive them without ever stalling
+        // the single thread — no read/write/waitpid loop here anymore.
         close(fd[1]);
         close(in_fd[0]);
-
-        // feed the request body to the child's stdin, then close to send EOF
-        if (req.body.size()) write(in_fd[1], req.body.data(), req.body.size());
-        close(in_fd[1]);
-
-        char buf[2048];
-        ssize_t n;
-        while ((n = read(fd[0], buf, sizeof(buf))) > 0) output.append(buf, n);
-
-        if (output.size() > 150)  // we only display up to 150 chars in the debug
-        {
-            Log::debug(output.substr(0, 150) + "\n...");
-        } else
-            Log::debug(output);
-
-        int status;
-        // the child is already dead or dying (alarm), so this won't block long
-        if (waitpid(pid, &status, 0) == -1) {
-            Log::error("WAITPID FAIL");
-            Log::error(std::strerror(errno));
-            exec_status = 500;
-            return;
-        }
-        exec_status = interpret_status(status);
-
+        fcntl(fd[0], F_SETFL, O_NONBLOCK);
+        fcntl(in_fd[1], F_SETFL, O_NONBLOCK);
     } else {
         close(fd[0]);
         close(fd[1]);
         close(in_fd[0]);
         close(in_fd[1]);
-        Log::error("CGI FAIL");
+        Log::error("CGI fork FAIL");
         Log::error(std::strerror(errno));
+        exec_status = 500;  // fork failed -> 500
+    }
+}
+
+// Called by CgiHandler once the child closes its stdout (EOF). The child has
+// already exited or is exiting, so this won't block long.
+void CgiProcess::reap() {
+    if (pid <= 0) {
         exec_status = 500;
         return;
-        // fork failed -> 500
     }
+    int status;
+    if (waitpid(pid, &status, 0) == -1) {
+        Log::error("WAITPID FAIL");
+        Log::error(std::strerror(errno));
+        exec_status = 500;
+        pid = -1;
+        return;
+    }
+    exec_status = interpret_status(status);
+    pid = -1;
+}
+
+void CgiProcess::kill_child() {
+    if (pid <= 0) return;
+    kill(pid, SIGKILL);
+    waitpid(pid, NULL, 0);
+    pid = -1;
 }
 
 void CgiProcess::child_fork() {
