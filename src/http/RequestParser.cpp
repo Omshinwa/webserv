@@ -34,9 +34,7 @@ RequestParser::RequestParser(std::string& buffer)
           config(NULL),
           content_length(0),
           buffer(buffer),
-          scan_pos(0) {
-    Log::debug("Request Parser Creation");
-}
+          scan_pos(0) {}
 
 RequestParser::~RequestParser() {}
 

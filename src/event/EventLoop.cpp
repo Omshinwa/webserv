@@ -54,6 +54,15 @@ void EventLoop::run() {
     }
 }
 
+void EventLoop::set_events(int fd, short events) {
+    for (size_t i = 0; i < _pollfds.size(); i++) {
+        if (_pollfds[i].fd == fd) {
+            _pollfds[i].events = events;
+            return;
+        }
+    }
+}
+
 void EventLoop::unregister_fd(int fd) {
     fd_to_handler.erase(fd);
     Log::event("CLOSED Event FD: " + utils::to_str(fd));

@@ -8,6 +8,7 @@
 #include <cstring>
 #include <ctime>
 
+#include "../event/EventLoop.hpp"
 #include "../http/ResponseBuilder.hpp"
 #include "../utils/Log.hpp"
 #include "../utils/Utils.hpp"
@@ -18,8 +19,10 @@ const time_t CONNECTION_TIMEOUT_SEC = 10;
 
 // Connection handles the buffers for reading and writing
 // It creates the Request and Response
-Connection::Connection(int fd, const std::vector<ServerConfig>& configs)
-        : fd(fd),
+Connection::Connection(EventLoop& event_loop, int fd,
+                       const std::vector<ServerConfig>& configs)
+        : IEventHandler(event_loop),
+          fd(fd),
           cgi(NULL),
           _send_offset(0),
           request(_recv_buf),
@@ -124,14 +127,16 @@ void Connection::queue_response() {
 
     _send_buf = response.build();
     _send_offset = 0;
-    finished = true;
+    // Response is ready: stop waiting to read, start waiting to write. on_writable
+    // drains _send_buf and sets finished once the whole response has gone out.
+    event_loop.set_events(fd, POLLOUT);
 }
 
 void Connection::on_cgi_done() {
     ResponseBuilder response(*cgi);
     _send_buf = response.build();
     _send_offset = 0;
-    finished = true;
+    event_loop.set_events(fd, POLLOUT);
 }
 
 const ServerConfig& Connection::resolve_virtual_host(const std::string& host) const {

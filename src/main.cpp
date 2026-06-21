@@ -76,7 +76,7 @@ int main(int ac, char** av) {
         for (std::map<std::string, std::vector<ServerConfig> >::iterator it =
                      groups.begin();
              it != groups.end(); ++it) {
-            Server* s = new Server(it->second);  // binds ONE socket, keeps the group
+            Server* s = new Server(event_loop, it->second);  // binds ONE socket, keeps the group
             servers.push_back(s);
             event_loop.register_fd(s->fd, POLLIN, s);
         }

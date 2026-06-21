@@ -71,8 +71,6 @@ CgiProcess::CgiProcess(const RequestParser& req, const ServerConfig& config,
         if (req.body.size()) write(in_fd[1], req.body.data(), req.body.size());
         close(in_fd[1]);
 
-        // The child armed alarm(CGI_TIMEOUT_SEC) on itself: if it hangs, the
-        // kernel kills it, which closes its stdout and unblocks the read below.
         char buf[2048];
         ssize_t n;
         while ((n = read(fd[0], buf, sizeof(buf))) > 0) output.append(buf, n);

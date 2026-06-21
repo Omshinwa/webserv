@@ -8,9 +8,10 @@ namespace {
 int CONNECTION_TIMEOUT_SEC = 5;
 };
 
-CgiHandler::CgiHandler(const RequestParser& req, const ServerConfig& config,
-                       const std::string& interpreter, const std::string& script_path)
-        : cgi(req, config, interpreter, script_path) {
+CgiHandler::CgiHandler(EventLoop& event_loop, const RequestParser& req,
+                       const ServerConfig& config, const std::string& interpreter,
+                       const std::string& script_path)
+        : IEventHandler(event_loop), cgi(req, config, interpreter, script_path) {
     read_buffer = "";
     write_buffer = "";
 }

@@ -27,7 +27,8 @@ class Connection : public IEventHandler {
 
         // configs: all server blocks sharing this listening socket; used to
         // resolve the virtual host once the request's Host header is known.
-        Connection(int listen_fd, const std::vector<ServerConfig>& configs);
+        Connection(EventLoop& event_loop, int listen_fd,
+                   const std::vector<ServerConfig>& configs);
         ~Connection();
 
         void touch();

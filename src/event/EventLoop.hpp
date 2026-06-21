@@ -43,6 +43,9 @@ class EventLoop {
 
         void register_fd(int fd, int events, IEventHandler* handler);
         void unregister_fd(int fd);
+        // Change what an already-registered fd is polled for, e.g. switch from
+        // waiting on POLLIN (reading a request) to POLLOUT (sending a response).
+        void set_events(int fd, short events);
 
     private:
         std::map<int, IEventHandler*> fd_to_handler;

@@ -12,6 +12,7 @@
 #include <iostream>
 #include <stdexcept>
 
+#include "../event/EventLoop.hpp"
 #include "../event/IEventHandler.hpp"
 #include "../utils/Log.hpp"
 #include "../utils/Utils.hpp"
@@ -21,7 +22,8 @@
 // share this host:port — i.e. the virtual hosts reachable through this socket.
 // The caller (group_by_host_port) guarantees they all share host:port, so the
 // first one defines the endpoint to bind.
-Server::Server(const std::vector<ServerConfig>& configs) : configs(configs) {
+Server::Server(EventLoop& event_loop, const std::vector<ServerConfig>& configs)
+        : IEventHandler(event_loop), configs(configs) {
     const ServerConfig& first = configs[0];
     create_socket(first.host, first.port);
     log_event("Server Listening to: " + first.host + ":" + utils::to_str(first.port) +
@@ -95,12 +97,14 @@ void Server::accept_new_connection(int listen_fd) {
         socklen_t len = sizeof(addr);
         int connection_fd = accept(listen_fd, (struct sockaddr*)&addr, &len);
         if (connection_fd < 0) throw std::runtime_error(std::strerror(errno));
-        c = new Connection(connection_fd, configs);
+        c = new Connection(event_loop, connection_fd, configs);
 
         uint32_t ip = ntohl(addr.sin_addr.s_addr);  // host byte order
         c->remote_addr = utils::to_str((ip >> 24) & 0xFF) + "." +
                          utils::to_str((ip >> 16) & 0xFF) + "." +
                          utils::to_str((ip >> 8) & 0xFF) + "." + utils::to_str(ip & 0xFF);
+        // Hand the new client fd to the loop so it actually gets polled.
+        event_loop.register_fd(c->fd, POLLIN, c);
         log_event("NEW Connection Socket FD: " + utils::to_str(c->fd));
     } catch (const std::exception& e) {
         log_error(std::string("accept error: ") + e.what());
