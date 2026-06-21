@@ -4,6 +4,7 @@
 #include <netinet/in.h>
 #include <sys/types.h>
 
+#include <ctime>
 #include <string>
 #include <vector>
 
@@ -32,6 +33,12 @@ class Connexion {
         State state() const;
         void mark_closing();
 
+        // Idle-timeout helpers. touch() stamps the current time; it's called on
+        // every successful recv/send. timed_out() reports whether the connection
+        // has been silent for longer than idle_secs.
+        void touch();
+        bool timed_out(time_t now, time_t idle_secs) const;
+
         // Pull bytes from the socket into _recv_buf.
         // Returns bytes read, 0 on peer close, -1 on error.
         void do_recv();
@@ -54,6 +61,8 @@ class Connexion {
 
         const std::vector<ServerConfig>& _configs;
         const ServerConfig* _active;  // resolved virtual host, NULL until header parsed
+
+        time_t _last_activity;  // last successful recv/send; drives the idle timeout
 
         // Pick the server block whose server_names matches the Host header,
         // falling back to the first (default) server for this socket.

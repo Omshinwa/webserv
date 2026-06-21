@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include <cstring>
+#include <ctime>
 
 #include "../http/ResponseBuilder.hpp"
 #include "../utils/Log.hpp"
@@ -19,7 +20,8 @@ Connexion::Connexion(int fd, const std::vector<ServerConfig>& configs)
           _send_offset(0),
           request(_recv_buf),
           _configs(configs),
-          _active(NULL) {
+          _active(NULL),
+          _last_activity(time(NULL)) {
     fcntl(fd, F_SETFL, O_NONBLOCK);
 }
 
@@ -31,10 +33,17 @@ Connexion::State Connexion::state() const { return _state; }
 
 void Connexion::mark_closing() { _state = CLOSING; }
 
+void Connexion::touch() { _last_activity = time(NULL); }
+
+bool Connexion::timed_out(time_t now, time_t idle_secs) const {
+    return now - _last_activity > idle_secs;
+}
+
 void Connexion::do_recv() {
     char buf[4096];
     ssize_t n = recv(fd, buf, sizeof(buf) - 1, 0);
     if (n > 0) {
+        touch();
         buf[n] = '\0';
         _recv_buf.append(buf, n);
         log_info("< RECEIVED file descriptor " + utils::to_str(fd) + ":");
@@ -86,6 +95,7 @@ ssize_t Connexion::do_send() {
 
     ssize_t n = send(fd, buf, left, 0);
     if (n > 0) {
+        touch();
         log_event("> SENT to file descriptor " + utils::to_str(fd));
         log_info(buf);
 

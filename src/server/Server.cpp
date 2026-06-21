@@ -8,6 +8,7 @@
 #include <cerrno>
 #include <cstddef>
 #include <cstring>
+#include <ctime>
 #include <iostream>
 #include <stdexcept>
 
@@ -15,6 +16,18 @@
 #include "../utils/Utils.hpp"
 #include "Connexion.hpp"
 #include "signal.hpp"
+
+namespace {
+
+// How long poll() blocks before returning 0 so we can run housekeeping. A
+// finite value (vs. -1 = block forever) guarantees the idle sweep below runs
+// even when every connection is silent.
+const int POLL_TIMEOUT_MS = 3000;
+
+// Drop a connection after this many seconds with no successful recv/send.
+const time_t CONNEXION_TIMEOUT_SEC = 10;
+
+}  // namespace
 
 // Group the configs by host:port; each unique pair gets one listening socket,
 // and the configs sharing it become its virtual hosts.
@@ -112,9 +125,9 @@ void Server::run() {
     while (!webserv::g_stop) {
         // poll will set all the revents to 0, then
         // poll will BLOCK the process until an event triggers it
-        int n = poll(&_pollfds[0], _pollfds.size(), -1);
+        int n = poll(&_pollfds[0], _pollfds.size(), POLL_TIMEOUT_MS);
         if (n < 0) {
-            if (errno == EINTR)  // signal interrupted
+            if (webserv::g_stop)  // signal interrupted
             {
                 log_error("SIGNAL INTERRUPT");
                 continue;
@@ -127,6 +140,18 @@ void Server::run() {
         for (size_t i = 0; i < _pollfds.size(); i++) {
             if (_pollfds[i].revents == 0) continue;
             handle_event(_pollfds[i]);
+        }
+
+        // Idle sweep: mark connections silent for too long as CLOSING.
+        time_t now = time(NULL);
+        for (std::map<int, Connexion*>::iterator it = _connexions.begin();
+             it != _connexions.end(); ++it) {
+            Connexion* c = it->second;
+            if (c->state() != Connexion::CLOSING &&
+                c->timed_out(now, CONNEXION_TIMEOUT_SEC)) {
+                log_event("TIMEOUT Connexion Socket FD: " + utils::to_str(c->fd));
+                c->mark_closing();
+            }
         }
 
         // goes through connexions, clean them if their state is 'CLOSING',
