@@ -20,6 +20,7 @@ const time_t CONNECTION_TIMEOUT_SEC = 10;
 // It creates the Request and Response
 Connection::Connection(int fd, const std::vector<ServerConfig>& configs)
         : fd(fd),
+          cgi(NULL),
           _send_offset(0),
           request(_recv_buf),
           _configs(configs),
@@ -27,6 +28,8 @@ Connection::Connection(int fd, const std::vector<ServerConfig>& configs)
           _last_activity(time(NULL)) {
     fcntl(fd, F_SETFL, O_NONBLOCK);
 }
+
+Connection::~Connection() { delete cgi; }
 
 void Connection::touch() { _last_activity = time(NULL); }
 
@@ -113,16 +116,19 @@ void Connection::queue_response() {
     request.remote_addr = remote_addr;
     ResponseBuilder response(request, config);
 
-    // is it running a CGI?
+    // Async CGI: the CgiHandler will call on_cgi_done() once the script exits.
+    // (Currently dormant — CGI runs synchronously inside ResponseBuilder.)
     if (response.waiting_for_cgi) {
-        // _state = CGI_RUNNING;
         return;
     }
-    on_cgi_done();
+
+    _send_buf = response.build();
+    _send_offset = 0;
+    finished = true;
 }
 
 void Connection::on_cgi_done() {
-    ResponseBuilder response(cgi);
+    ResponseBuilder response(*cgi);
     _send_buf = response.build();
     _send_offset = 0;
     finished = true;

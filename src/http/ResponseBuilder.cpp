@@ -213,7 +213,7 @@ void ResponseBuilder::handle_get(RequestParser& req, const ServerConfig& config)
     }
 
     if (handle_cgi(req, config, filepath)) {
-        waiting_for_cgi = true;
+        // handle_cgi runs the CGI synchronously and fills in status/body.
         return;
     }
     // Static file: must be readable.
@@ -332,7 +332,7 @@ void ResponseBuilder::handle_method(RequestParser& req, const ServerConfig& conf
 }
 
 ResponseBuilder::ResponseBuilder(RequestParser& req, const ServerConfig& config)
-        : protocol("HTTP/1.0"), location(NULL) {
+        : waiting_for_cgi(false), protocol("HTTP/1.0"), location(NULL) {
     header["connection"] = "close";
 
     if (req.get_status_code() != 0)  // theres an error

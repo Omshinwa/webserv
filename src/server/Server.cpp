@@ -110,6 +110,8 @@ void Server::accept_new_connection(int listen_fd) {
 
 void Server::log_info(std::string s) { std::cout << Log::color(0) << s << Log::nl; }
 
+void Server::log_error(std::string s) { Log::error(s); }
+
 void Server::log_event(std::string s) {
     // lets do rainbow color
     std::string bg = "\033[48;5;231m";

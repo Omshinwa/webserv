@@ -39,7 +39,9 @@ class Connection : public IEventHandler {
         // Once you've parsed a complete request, build the response and call this.
         void queue_response();
         void on_cgi_done();
-        CgiHandler cgi;
+        // Owned, async CGI handler. NULL until a CGI request is dispatched; the
+        // synchronous CGI path (CgiProcess in ResponseBuilder) leaves it unused.
+        CgiHandler* cgi;
 
     private:
         std::string _recv_buf;

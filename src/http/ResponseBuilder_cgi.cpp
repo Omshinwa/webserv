@@ -29,8 +29,13 @@ bool parse_http_header_line(const std::string& line, std::string& key,
 }  // namespace
 
 // Construct the response from the CGI's output
-ResponseBuilder::ResponseBuilder(CgiHandler& handler) {
-    std::string raw = handler.read_buffer;
+ResponseBuilder::ResponseBuilder(CgiHandler& handler)
+        : waiting_for_cgi(false), protocol("HTTP/1.0"), location(NULL) {
+    parse_cgi_response(handler.read_buffer);
+}
+
+// Parse a raw CGI response (header block + body) into status_code/header/body.
+void ResponseBuilder::parse_cgi_response(std::string raw) {
     // 1. find the header/body separator (tolerant, like you already do)
     size_t sep = raw.find("\r\n\r\n");
     std::string delim = "\r\n";
