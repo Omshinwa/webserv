@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "../config/Config.hpp"
-#include "IEventHandler.hpp"
+#include "../event/IEventHandler.hpp"
 
 class Connection;
 

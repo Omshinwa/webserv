@@ -36,22 +36,22 @@
 
 // ── project ─────────────────────────────────────────────────────────────────
 
-#include "../utils/Log.hpp"
-#include "../utils/Utils.hpp"
+#include "utils/Log.hpp"
+#include "utils/Utils.hpp"
 //
-#include "../config/Config.hpp"
+#include "config/Config.hpp"
 //
 
-#include "../event/EventLoop.hpp"
-#include "../event/IEventHandler.hpp"
+#include "event/EventLoop.hpp"
+#include "event/IEventHandler.hpp"
 //
-#include "../http/CgiProcess.hpp"
-#include "../http/RequestParser.hpp"
-#include "../http/ResponseBuilder.hpp"
-#include "../server/CgiHandler.hpp"
-#include "../server/Connection.hpp"
-#include "../server/Server.hpp"
-#include "../server/signal.hpp"
+#include "http/CgiProcess.hpp"
+#include "http/RequestParser.hpp"
+#include "http/ResponseBuilder.hpp"
+#include "server/CgiHandler.hpp"
+#include "server/Connection.hpp"
+#include "server/Server.hpp"
+#include "server/signal.hpp"
 
 // Log, Utils
 //    └─> Config

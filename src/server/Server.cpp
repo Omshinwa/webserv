@@ -15,7 +15,7 @@
 #include "../utils/Log.hpp"
 #include "../utils/Utils.hpp"
 #include "Connection.hpp"
-#include "IEventHandler.hpp"
+#include "../event/IEventHandler.hpp"
 #include "signal.hpp"
 
 // Group the configs by host:port; each unique pair gets one listening socket,

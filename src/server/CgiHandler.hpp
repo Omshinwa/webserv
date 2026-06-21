@@ -17,7 +17,7 @@
 #include "../include.hpp"
 #include "../utils/Log.hpp"
 #include "Connection.hpp"
-#include "IEventHandler.hpp"
+#include "../event/IEventHandler.hpp"
 
 class CgiHandler : public IEventHandler {
     public:

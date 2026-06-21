@@ -11,7 +11,7 @@
 #include "../config/Config.hpp"
 #include "../http/RequestParser.hpp"
 #include "../include.hpp"
-#include "IEventHandler.hpp"
+#include "../event/IEventHandler.hpp"
 
 typedef struct cgi_communication {
         std::string remote_addr;
