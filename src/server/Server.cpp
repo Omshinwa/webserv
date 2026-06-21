@@ -15,6 +15,7 @@
 #include "../utils/Log.hpp"
 #include "../utils/Utils.hpp"
 #include "Connexion.hpp"
+#include "IEventHandler.hpp"
 #include "signal.hpp"
 
 namespace {
@@ -187,6 +188,15 @@ void Server::run() {
 //
 
 void Server::handle_event(pollfd& pfd) {
+    IEventHandler* h = _handlers[pfd.fd];
+    int revents = pfd.revents;
+    if (revents & (POLLHUP | POLLERR))
+        h->on_hangup(pfd.fd);
+    else if (revents & POLLIN)
+        h->on_readable(pfd.fd);
+    else if (revents & POLLOUT)
+        h->on_writable(pfd.fd);
+
     // 1. Handle Errors
     if (pfd.revents & (POLLHUP | POLLERR | POLLNVAL)) {
         if (_listeners.count(pfd.fd)) {  // the poll is a listening socket
@@ -202,6 +212,8 @@ void Server::handle_event(pollfd& pfd) {
         if (_listeners.count(pfd.fd)) {  // the poll is a listening socket
             accept_new_connexion(pfd.fd);
         } else {
+            // is it a cgi fd?
+
             Connexion* c = _connexions[pfd.fd];
             c->do_recv();
             if (c->state() == Connexion::CLOSING) return;
@@ -212,6 +224,7 @@ void Server::handle_event(pollfd& pfd) {
 
     // 3. Writes
     if (pfd.revents & POLLOUT) {
+        // is it a cgi fd?
         Connexion* c = _connexions[pfd.fd];
         if (c->do_send() < 0) c->mark_closing();
         if (c->state() == Connexion::CLOSING) return;

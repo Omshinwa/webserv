@@ -11,6 +11,7 @@ class ResponseBuilder {
         ~ResponseBuilder() {};
 
         std::string build();
+        bool waiting_for_cgi = 0;
 
     private:
         std::string protocol;

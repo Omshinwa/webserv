@@ -112,9 +112,15 @@ void Connexion::queue_response() {
     const ServerConfig& config = _active ? *_active : _configs[0];
     request.remote_addr = remote_addr;
     ResponseBuilder response(request, config);
-    _send_buf = response.build();
-    _send_offset = 0;
-    _state = WRITING;
+
+    // is it running a CGI?
+    if (response.waiting_for_cgi) {
+        _state = CGI_RUNNING;
+    } else {
+        _send_buf = response.build();
+        _send_offset = 0;
+        _state = WRITING;
+    }
 }
 
 const ServerConfig& Connexion::resolve_virtual_host(const std::string& host) const {

@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "../config/Config.hpp"
+#include "IEventHandler.hpp"
 
 class Connexion;
 
@@ -24,6 +25,11 @@ class Server {
         std::map<int, std::vector<ServerConfig> > _listeners;
         std::vector<pollfd> _pollfds;           // list of all the poll requests
         std::map<int, Connexion*> _connexions;  // int fd -> Connexion*
+        std::map<int, Connexion*> is_cgi;
+
+        std::map<int, IEventHandler*> _handlers;
+        void register_fd(int fd, int events, IEventHandler* handler);
+        void unregister_fd(int fd);
 
         static int create_socket(const std::string& host, int port);
         void append_to_poll(int fd);

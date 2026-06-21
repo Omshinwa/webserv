@@ -212,8 +212,10 @@ void ResponseBuilder::handle_get(RequestParser& req, const ServerConfig& config)
         return;
     }
 
-    if (handle_cgi(req, config, filepath)) return;
-
+    if (handle_cgi(req, config, filepath)) {
+        waiting_for_cgi = true;
+        return;
+    }
     // Static file: must be readable.
     if (!utils::is_readable(filepath)) {
         status_code = 403;

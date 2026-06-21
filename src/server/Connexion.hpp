@@ -10,17 +10,18 @@
 
 #include "../config/Config.hpp"
 #include "../http/RequestParser.hpp"
+#include "CgiHandler.hpp"
 
 class Connexion {
     public:
         enum State {
             READING,  // waiting for request bytes
             WRITING,  // response queued, sending it out
-            CLOSING   // mark for removal from poll set
+            CGI_RUNNING,
+            CLOSING  // mark for removal from poll set
         };
 
         const int fd;
-
         // Client IP, set by the Server right after accept(); handed to the
         // request when the response is built (used for the CGI REMOTE_ADDR).
         std::string remote_addr;
@@ -50,6 +51,8 @@ class Connexion {
 
         // Once you've parsed a complete request, build the response and call this.
         void queue_response();
+        void on_cgi_done();
+        CgiHandler cgi;
 
     private:
         State _state;
