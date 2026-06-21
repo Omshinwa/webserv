@@ -10,7 +10,7 @@ void EventLoop::register_fd(int fd, int events, IEventHandler* handler) {
     polling_req.events = events;  // POLLIN;
     polling_req.revents = 0;
     _pollfds.push_back(polling_req);
-    fd_to_eventHandler[fd] = handler;
+    fd_to_handler[fd] = handler;
 }
 
 // poll uses events and revents:
@@ -37,39 +37,24 @@ void EventLoop::run() {
             handle_event(_pollfds[i]);
         }
 
-        // Idle sweep: mark connections silent for too long as CLOSING.
+        // Idle
         time_t now = time(NULL);
-        for (std::map<int, Connexion*>::iterator it = _connexions.begin();
-             it != _connexions.end(); ++it) {
-            Connexion* c = it->second;
-            if (c->state() != Connexion::CLOSING &&
-                c->timed_out(now, CONNEXION_TIMEOUT_SEC)) {
-                log_event("TIMEOUT Connexion Socket FD: " + utils::to_str(c->fd));
-                c->mark_closing();
-            }
+        for (int i = 0; i < _pollfds.size(); ++i) {
+            int fd = _pollfds[i];
+            fd_to_handler[fd].on_tick(now);
         }
 
-        // goes through connexions, clean them if their state is 'CLOSING',
-        for (std::map<int, Connexion*>::iterator it = _connexions.begin();
-             it != _connexions.end();) {
-            Connexion* c = it->second;
-            ++it;  // advance before drop_connexion() invalidates the current
-                   // iterator
-            if (c->state() == Connexion::CLOSING) drop_connexion(c);
-        }
         for (int i = 0; i < _pollfds.size(); ++i) {
-            int fd =
-                    _pollfds[i].fd if (fd_to_eventHandler[fd].finished) unregister_fd(fd);
+            int fd = _pollfds[i].fd if (fd_to_handler[fd].finished) unregister_fd(fd);
         }
     }
 }
 
 void EventLoop::unregister_fd(int fd) {
-    fd_to_eventHandler.erase(fd);
+    fd_to_handler.erase(fd);
     Log::event("CLOSED Event FD: " + utils::to_str(fd));
     close(fd);
-    // delete fd_to_eventHandler[fd];
-    // destructor closes the fd ?
+    // should the EventLoop close the fd, or the Connection...?
     for (size_t i = 0; i < _pollfds.size(); i++) {
         if (_pollfds[i].fd == fd) {
             _pollfds.erase(_pollfds.begin() + i);
@@ -79,12 +64,11 @@ void EventLoop::unregister_fd(int fd) {
 }
 
 void EventLoop::handle_event(pollfd& pfd) {
-    IEventHandler* h = fd_to_eventHandler[pfd.fd];
+    int fd = pfd.fd;
+    IEventHandler* h = fd_to_handler[pfd.fd];
     int revents = pfd.revents;
-    if (revents & (POLLHUP | POLLERR))
-        h->on_hangup(pfd.fd);
-    else if (revents & POLLIN)
-        h->on_readable(pfd.fd);
-    else if (revents & POLLOUT)
-        h->on_writable(pfd.fd);
+    if (revents & POLLIN) h->on_readable(fd);  // drains; read()==0 = graceful EOF
+    if (revents & POLLOUT) h->on_writable(fd);
+    if (revents & (POLLERR | POLLNVAL))  // real breakage → abort / 502
+        h->finished = true;
 }

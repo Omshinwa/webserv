@@ -16,7 +16,8 @@ int main(int ac, char** av) {
         std::vector<ServerConfig> configs = Config::parse(path);
         Server server(configs);
         webserv::setup_signals();
-        server.run();
+        EventLoop event_loop;
+
     } catch (const std::exception& e) {
         Log::error(e.what());
         return 1;

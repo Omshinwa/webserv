@@ -34,7 +34,7 @@ class RequestParser {
         std::string URI;
         std::string protocol;
         std::string body;
-        std::string remote_addr;  // client IP, filled in by the Connexion
+        std::string remote_addr;  // client IP, filled in by the Connection
 
     private:
         static const size_t MAX_HEADER_SIZE = 32000;
@@ -43,7 +43,7 @@ class RequestParser {
         t_dict header;
         int status_code;
 
-        // Resolved by the Connexion from the Host header; NULL until then.
+        // Resolved by the Connection from the Host header; NULL until then.
         const ServerConfig* config;
 
         size_t content_length;  // parsed content length

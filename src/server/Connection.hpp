@@ -1,5 +1,5 @@
-#ifndef CONNEXION_HPP
-#define CONNEXION_HPP
+#ifndef CONNECTION_HPP
+#define CONNECTION_HPP
 
 #include <netinet/in.h>
 #include <sys/types.h>
@@ -13,15 +13,13 @@
 #include "../include.hpp"
 #include "IEventHandler.hpp"
 
-class Connexion : public IEventHandler {
-    public:
-        enum State {
-            READING,  // waiting for request bytes
-            WRITING,  // response queued, sending it out
-            CGI_RUNNING,
-            CLOSING  // mark for removal from poll set
-        };
+typedef struct cgi_communication {
+        std::string remote_addr;
 
+} t_cgi_com;
+
+class Connection : public IEventHandler {
+    public:
         const int fd;
         // Client IP, set by the Server right after accept(); handed to the
         // request when the response is built (used for the CGI REMOTE_ADDR).
@@ -29,26 +27,14 @@ class Connexion : public IEventHandler {
 
         // configs: all server blocks sharing this listening socket; used to
         // resolve the virtual host once the request's Host header is known.
-        Connexion(int listen_fd, const std::vector<ServerConfig>& configs);
-        ~Connexion();
+        Connection(int listen_fd, const std::vector<ServerConfig>& configs);
+        ~Connection();
 
-        State state() const;
-        void mark_closing();
-
-        // Idle-timeout helpers. touch() stamps the current time; it's called on
-        // every successful recv/send. timed_out() reports whether the connection
-        // has been silent for longer than idle_secs.
         void touch();
-        bool timed_out(time_t now, time_t idle_secs) const;
 
-        // Pull bytes from the socket into _recv_buf.
-        // Returns bytes read, 0 on peer close, -1 on error.
-        void on_readable();
-
-        // Push bytes from _send_buf to the socket, advancing _send_offset.
-        // Returns bytes sent, -1 on error. Flips state to CLOSING when buffer
-        // drained.
-        void on_writable();
+        void on_readable(int fd);
+        void on_writable(int fd);
+        void on_tick(time_t now);
 
         // Once you've parsed a complete request, build the response and call this.
         void queue_response();
@@ -56,13 +42,12 @@ class Connexion : public IEventHandler {
         CgiHandler cgi;
 
     private:
-        State _state;
         std::string _recv_buf;
         std::string _send_buf;
         size_t _send_offset;
+        size_t recv_offset;
 
         RequestParser request;
-        ResponseBuilder response;
 
         const std::vector<ServerConfig>& _configs;
         const ServerConfig* _active;  // resolved virtual host, NULL until header parsed
@@ -80,10 +65,10 @@ class Connexion : public IEventHandler {
         void log_error(std::string s);
 
         // INNACCESSIBLE
-        // we dont allow several Connexion for one fd
-        Connexion();
-        Connexion(const Connexion&);
-        Connexion& operator=(const Connexion&);
+        // we dont allow several Connection for one fd
+        Connection();
+        Connection(const Connection&);
+        Connection& operator=(const Connection&);
 };
 
 #endif

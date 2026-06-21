@@ -1,13 +1,5 @@
-#ifndef INCLUDE_HPP
-#define INCLUDE_HPP
-
-// Debug convenience header: pulls in every project header (and the common
-// standard-library ones) in one shot. Drop `#include "include.hpp"` at the top
-// of any .cpp while hacking so you don't have to chase individual headers.
-//
-// NOT for committed code — include only what each file actually needs once the
-// dust settles. Paths are relative to src/ (same as main.cpp).
-
+#ifndef EVENTLOOP_H
+#define EVENTLOOP_H
 // ── standard library ────────────────────────────────────────────────────────
 #include <algorithm>
 #include <cerrno>
@@ -40,25 +32,21 @@
 #include "../utils/Utils.hpp"
 //
 #include "../config/Config.hpp"
-//
+#include "IEventHandler.hpp"
 
-#include "../event/EventLoop.hpp"
-#include "../event/IEventHandler.hpp"
-//
-#include "../http/CgiProcess.hpp"
-#include "../http/RequestParser.hpp"
-#include "../http/ResponseBuilder.hpp"
-#include "../server/CgiHandler.hpp"
-#include "../server/Connection.hpp"
-#include "../server/Server.hpp"
-#include "../server/signal.hpp"
+// allows for async fd, listen to events with poll() and dispatch it to the correct
+// handlers
+class EventLoop {
+    public:
+        void run();
+        void handle_event(pollfd& pfd);
 
-// Log, Utils
-//    └─> Config
-//           └─> Request, Response
-//                  └─> Client
-//                         └─> Server
-//                                └─> Handler ──> Cgi
-//                                       └─> main
+        void register_fd(int fd, int events, IEventHandler* handler);
+        void unregister_fd(int fd);
+
+    private:
+        std::map<int, IEventHandler&> fd_to_handler;
+        std::vector<pollfd> _pollfds;  // list of all the poll requests
+};
 
 #endif

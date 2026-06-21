@@ -16,7 +16,7 @@
 
 #include "../include.hpp"
 #include "../utils/Log.hpp"
-#include "Connexion.hpp"
+#include "Connection.hpp"
 #include "IEventHandler.hpp"
 
 class CgiHandler : public IEventHandler {
@@ -25,7 +25,7 @@ class CgiHandler : public IEventHandler {
                    const std::string& interpreter, const std::string& script_path);
         ;
         CgiProcess cgi;
-        Connexion* _owner;  // who to notify on completion
+        Connection* _owner;  // who to notify on completion
 
         void on_readable(int fd);
         // read pipe; on EOF -> _owner->on_cgi_done(output, status)

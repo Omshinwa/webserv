@@ -1,5 +1,5 @@
 
-#include "Connexion.hpp"
+#include "Connection.hpp"
 
 #include <fcntl.h>
 #include <sys/socket.h>
@@ -12,11 +12,14 @@
 #include "../utils/Log.hpp"
 #include "../utils/Utils.hpp"
 
-// Connexion handles the buffers for reading and writing
+namespace {
+const time_t CONNECTION_TIMEOUT_SEC = 10;
+}  // namespace
+
+// Connection handles the buffers for reading and writing
 // It creates the Request and Response
-Connexion::Connexion(int fd, const std::vector<ServerConfig>& configs)
+Connection::Connection(int fd, const std::vector<ServerConfig>& configs)
         : fd(fd),
-          _state(READING),
           _send_offset(0),
           request(_recv_buf),
           _configs(configs),
@@ -25,21 +28,17 @@ Connexion::Connexion(int fd, const std::vector<ServerConfig>& configs)
     fcntl(fd, F_SETFL, O_NONBLOCK);
 }
 
-Connexion::~Connexion() {
-    if (fd >= 0) close(fd);
+void Connection::touch() { _last_activity = time(NULL); }
+
+void Connection::on_tick(time_t now) {
+    bool timed_out = (now - _last_activity > CONNECTION_TIMEOUT_SEC);
+    if (timed_out(now, CONNECTION_TIMEOUT_SEC)) {
+        log_event("TIMEOUT Connection Socket FD: " + utils::to_str(c->fd));
+        finished = true;
+    }
 }
 
-Connexion::State Connexion::state() const { return _state; }
-
-void Connexion::mark_closing() { _state = CLOSING; }
-
-void Connexion::touch() { _last_activity = time(NULL); }
-
-bool Connexion::timed_out(time_t now, time_t idle_secs) const {
-    return now - _last_activity > idle_secs;
-}
-
-void Connexion::on_readable() {
+void Connection::on_readable() {
     char buf[4096];
     ssize_t n = recv(fd, buf, sizeof(buf) - 1, 0);
     if (n > 0) {
@@ -60,10 +59,10 @@ void Connexion::on_readable() {
             request.parse();
         }
     } else if (n == 0) {
-        _state = CLOSING;  // peer closed cleanly
+        this->finished = true;  // peer closed cleanly
     } else {
         log_error("recv returned a negative number");
-        _state = CLOSING;  // some error
+        this->finished = true;  // some error
     }
 
     // Log::info("parse state: " + utils::to_str(request.get_state()));
@@ -87,9 +86,7 @@ void Connexion::on_readable() {
     return;
 }
 
-void Connexion::on_hangup()
-
-void Connexion::on_writable() {
+void Connection::on_writable() {
     if (_send_offset >= _send_buf.size()) return;
 
     const char* buf = _send_buf.data() + _send_offset;
@@ -109,7 +106,7 @@ void Connexion::on_writable() {
     if (n < 0) _state = CLOSING;
 }
 
-void Connexion::queue_response() {
+void Connection::queue_response() {
     // _active may be NULL if we errored before parsing the Host header (e.g. a
     // 400 on a malformed header); fall back to the default server block.
     const ServerConfig& config = _active ? *_active : _configs[0];
@@ -124,14 +121,14 @@ void Connexion::queue_response() {
     on_cgi_done();
 }
 
-void Connexion::on_cgi_done() {
+void Connection::on_cgi_done() {
     ResponseBuilder response(cgi.buffer);
     _send_buf = response.build();
     _send_offset = 0;
     _state = WRITING;
 }
 
-const ServerConfig& Connexion::resolve_virtual_host(const std::string& host) const {
+const ServerConfig& Connection::resolve_virtual_host(const std::string& host) const {
     // Strip any :port suffix from the Host header before matching.
     std::string name = host.substr(0, host.find(':'));
 
@@ -154,14 +151,14 @@ const ServerConfig& Connexion::resolve_virtual_host(const std::string& host) con
 //
 //
 
-void Connexion::log_debug(std::string s) {
+void Connection::log_debug(std::string s) {
     Log::color_idx = fd;
     if (s.size() > 200) {  // only display the first 200 characters
         Log::debug(s.substr(0, 200) + "\n...");
     } else
         Log::debug(s);
 }
-void Connexion::log_info(std::string s) {
+void Connection::log_info(std::string s) {
     Log::color_idx = fd;
     if (s.size() > 200) {  // only display the first 200 characters
         Log::info(s.substr(0, 200) + "\n...");
@@ -169,12 +166,12 @@ void Connexion::log_info(std::string s) {
         Log::info(s);
 }
 
-void Connexion::log_event(std::string s) {
+void Connection::log_event(std::string s) {
     Log::color_idx = fd;
     Log::event(s);
 }
 
-void Connexion::log_error(std::string s) {
+void Connection::log_error(std::string s) {
     Log::color_idx = fd;
     Log::error(s);
 }

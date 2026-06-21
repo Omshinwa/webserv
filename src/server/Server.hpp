@@ -1,5 +1,5 @@
-#ifndef ACCEPTOR_HPP
-#define ACCEPTOR_HPP
+#ifndef SERVER_HPP
+#define SERVER_HPP
 
 #include <netinet/in.h>
 #include <poll.h>
@@ -11,30 +11,23 @@
 #include "../config/Config.hpp"
 #include "IEventHandler.hpp"
 
-class Connexion;
+class Connection;
 
-class Acceptor {
+class Server {
     public:
-        Acceptor(const std::vector<ServerConfig>& configs);
-        ~Acceptor();
+        Server(const std::vector<ServerConfig>& configs);
+        ~Server();
 
-        void run();  // main poll loop, blocks forever
+        void on_readable(int fd);
+        void on_writable(int fd);
+        void on_tick(time_t now);
+
+        int fd;
 
     private:
-        // listen_fd -> the server configs sharing that host:port (virtual hosts)
-        std::map<int, std::vector<ServerConfig> > _listeners;
-        std::vector<pollfd> _pollfds;           // list of all the poll requests
-        std::map<int, Connexion*> _connexions;  // int fd -> Connexion*
-        std::map<int, Connexion*> is_cgi;
-
-        std::map<int, IEventHandler*> _handlers;
-
-        static int create_socket(const std::string& host, int port);
-        void append_to_poll(int fd);
-        void accept_new_connexion(int listen_fd);
-        void drop_connexion(Connexion* c);
-        void handle_event(pollfd& pfd);
-
+        const std::vector<ServerConfig>& configs;
+        void accept_new_connection(int listen_fd);
+        void create_socket(const std::string& host, int port);
         // LOG
         void log_debug(std::string s);
         void log_info(std::string s);
@@ -42,9 +35,9 @@ class Acceptor {
         void log_error(std::string s);
 
         // INNACCESSIBLE
-        Acceptor();
-        Acceptor(const Acceptor&);
-        Acceptor& operator=(const Acceptor&);
+        Server();
+        Server(const Server&);
+        Server& operator=(const Server&);
 };
 
 std::ostream& operator<<(std::ostream& os, const sockaddr_in& addr);
