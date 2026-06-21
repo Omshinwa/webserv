@@ -27,8 +27,8 @@ class CgiHandler : public IEventHandler {
         CgiProcess cgi;
         Connexion* _owner;  // who to notify on completion
 
-        void on_readable(
-                int fd);  // read pipe; on EOF -> _owner->on_cgi_done(output, status)
+        void on_readable(int fd);
+        // read pipe; on EOF -> _owner->on_cgi_done(output, status)
         void on_writable(int fd);
         void on_hangup(int fd);
 

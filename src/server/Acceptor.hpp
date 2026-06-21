@@ -1,5 +1,5 @@
-#ifndef SERVER_HPP
-#define SERVER_HPP
+#ifndef ACCEPTOR_HPP
+#define ACCEPTOR_HPP
 
 #include <netinet/in.h>
 #include <poll.h>
@@ -13,10 +13,10 @@
 
 class Connexion;
 
-class Server {
+class Acceptor {
     public:
-        Server(const std::vector<ServerConfig>& configs);
-        ~Server();
+        Acceptor(const std::vector<ServerConfig>& configs);
+        ~Acceptor();
 
         void run();  // main poll loop, blocks forever
 
@@ -28,8 +28,6 @@ class Server {
         std::map<int, Connexion*> is_cgi;
 
         std::map<int, IEventHandler*> _handlers;
-        void register_fd(int fd, int events, IEventHandler* handler);
-        void unregister_fd(int fd);
 
         static int create_socket(const std::string& host, int port);
         void append_to_poll(int fd);
@@ -44,9 +42,9 @@ class Server {
         void log_error(std::string s);
 
         // INNACCESSIBLE
-        Server();
-        Server(const Server&);
-        Server& operator=(const Server&);
+        Acceptor();
+        Acceptor(const Acceptor&);
+        Acceptor& operator=(const Acceptor&);
 };
 
 std::ostream& operator<<(std::ostream& os, const sockaddr_in& addr);

@@ -1,4 +1,4 @@
-#include "Server.hpp"
+#include "Acceptor.hpp"
 
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -32,7 +32,7 @@ const time_t CONNEXION_TIMEOUT_SEC = 10;
 
 // Group the configs by host:port; each unique pair gets one listening socket,
 // and the configs sharing it become its virtual hosts.
-Server::Server(const std::vector<ServerConfig>& configs) {
+Acceptor::Acceptor(const std::vector<ServerConfig>& configs) {
     std::map<std::string, std::vector<ServerConfig> > groups;
     for (size_t i = 0; i < configs.size(); i++) {
         std::string key = configs[i].host + ":" + utils::to_str(configs[i].port);
@@ -52,7 +52,7 @@ Server::Server(const std::vector<ServerConfig>& configs) {
 }
 
 // create socket -> nonblock -> bind -> listen, returns the listen fd
-int Server::create_socket(const std::string& host, int port) {
+int Acceptor::create_socket(const std::string& host, int port) {
     int fd;
     // create the socket
     {
@@ -98,16 +98,8 @@ int Server::create_socket(const std::string& host, int port) {
     return fd;
 }
 
-void Server::append_to_poll(int fd) {
-    pollfd polling_req;
-    polling_req.fd = fd;
-    polling_req.events = POLLIN;
-    polling_req.revents = 0;
-    _pollfds.push_back(polling_req);
-}
-
-Server::~Server() {
-    Log::debug("~Destructor Server");
+Acceptor::~Acceptor() {
+    Log::debug("~Destructor Acceptor");
     for (std::map<int, Connexion*>::iterator it = _connexions.begin();
          it != _connexions.end(); ++it) {
         delete it->second;  // destructor closes fd
@@ -118,10 +110,38 @@ Server::~Server() {
     }
 }
 
+//  ██████████ █████   █████ ██████████ ██████   █████ ███████████
+// ▒▒███▒▒▒▒▒█▒▒███   ▒▒███ ▒▒███▒▒▒▒▒█▒▒██████ ▒▒███ ▒█▒▒▒███▒▒▒█
+//  ▒███  █ ▒  ▒███    ▒███  ▒███  █ ▒  ▒███▒███ ▒███ ▒   ▒███  ▒
+//  ▒██████    ▒███    ▒███  ▒██████    ▒███▒▒███▒███     ▒███
+//  ▒███▒▒█    ▒▒███   ███   ▒███▒▒█    ▒███ ▒▒██████     ▒███
+//  ▒███ ▒   █  ▒▒▒█████▒    ▒███ ▒   █ ▒███  ▒▒█████     ▒███
+//  ██████████    ▒▒███      ██████████ █████  ▒▒█████    █████
+// ▒▒▒▒▒▒▒▒▒▒      ▒▒▒      ▒▒▒▒▒▒▒▒▒▒ ▒▒▒▒▒    ▒▒▒▒▒    ▒▒▒▒▒
+
+//  █████   █████                          █████ ████
+// ▒▒███   ▒▒███                          ▒▒███ ▒▒███
+//  ▒███    ▒███   ██████   ████████    ███████  ▒███   ██████
+//  ▒███████████  ▒▒▒▒▒███ ▒▒███▒▒███  ███▒▒███  ▒███  ███▒▒███
+//  ▒███▒▒▒▒▒███   ███████  ▒███ ▒███ ▒███ ▒███  ▒███ ▒███████
+//  ▒███    ▒███  ███▒▒███  ▒███ ▒███ ▒███ ▒███  ▒███ ▒███▒▒▒
+//  █████   █████▒▒████████ ████ █████▒▒████████ █████▒▒██████
+// ▒▒▒▒▒   ▒▒▒▒▒  ▒▒▒▒▒▒▒▒ ▒▒▒▒ ▒▒▒▒▒  ▒▒▒▒▒▒▒▒ ▒▒▒▒▒  ▒▒▒▒▒▒
+//
+//
+
+void Acceptor::append_to_poll(int fd) {
+    pollfd polling_req;
+    polling_req.fd = fd;
+    polling_req.events = POLLIN;
+    polling_req.revents = 0;
+    _pollfds.push_back(polling_req);
+}
+
 // poll uses events and revents:
 // events  = your question  → "is this fd readable? writable?"
 // revents = the answer     → "yes readable / yes writable / hung up / error"
-void Server::run() {
+void Acceptor::run() {
     log_event("Server running...");
     while (!webserv::g_stop) {
         // poll will set all the revents to 0, then
@@ -167,27 +187,7 @@ void Server::run() {
     log_event("SHUTTING DOWN");
 }
 
-//  ██████████ █████   █████ ██████████ ██████   █████ ███████████
-// ▒▒███▒▒▒▒▒█▒▒███   ▒▒███ ▒▒███▒▒▒▒▒█▒▒██████ ▒▒███ ▒█▒▒▒███▒▒▒█
-//  ▒███  █ ▒  ▒███    ▒███  ▒███  █ ▒  ▒███▒███ ▒███ ▒   ▒███  ▒
-//  ▒██████    ▒███    ▒███  ▒██████    ▒███▒▒███▒███     ▒███
-//  ▒███▒▒█    ▒▒███   ███   ▒███▒▒█    ▒███ ▒▒██████     ▒███
-//  ▒███ ▒   █  ▒▒▒█████▒    ▒███ ▒   █ ▒███  ▒▒█████     ▒███
-//  ██████████    ▒▒███      ██████████ █████  ▒▒█████    █████
-// ▒▒▒▒▒▒▒▒▒▒      ▒▒▒      ▒▒▒▒▒▒▒▒▒▒ ▒▒▒▒▒    ▒▒▒▒▒    ▒▒▒▒▒
-
-//  █████   █████                          █████ ████
-// ▒▒███   ▒▒███                          ▒▒███ ▒▒███
-//  ▒███    ▒███   ██████   ████████    ███████  ▒███   ██████
-//  ▒███████████  ▒▒▒▒▒███ ▒▒███▒▒███  ███▒▒███  ▒███  ███▒▒███
-//  ▒███▒▒▒▒▒███   ███████  ▒███ ▒███ ▒███ ▒███  ▒███ ▒███████
-//  ▒███    ▒███  ███▒▒███  ▒███ ▒███ ▒███ ▒███  ▒███ ▒███▒▒▒
-//  █████   █████▒▒████████ ████ █████▒▒████████ █████▒▒██████
-// ▒▒▒▒▒   ▒▒▒▒▒  ▒▒▒▒▒▒▒▒ ▒▒▒▒ ▒▒▒▒▒  ▒▒▒▒▒▒▒▒ ▒▒▒▒▒  ▒▒▒▒▒▒
-//
-//
-
-void Server::handle_event(pollfd& pfd) {
+void Acceptor::handle_event(pollfd& pfd) {
     IEventHandler* h = _handlers[pfd.fd];
     int revents = pfd.revents;
     if (revents & (POLLHUP | POLLERR))
@@ -196,45 +196,10 @@ void Server::handle_event(pollfd& pfd) {
         h->on_readable(pfd.fd);
     else if (revents & POLLOUT)
         h->on_writable(pfd.fd);
-
-    // 1. Handle Errors
-    if (pfd.revents & (POLLHUP | POLLERR | POLLNVAL)) {
-        if (_listeners.count(pfd.fd)) {  // the poll is a listening socket
-            log_error("server fatal error");
-            throw std::runtime_error("listening socket failed");
-        }
-        _connexions[pfd.fd]->mark_closing();
-        return;
-    }
-
-    // 2. Reads
-    if (pfd.revents & POLLIN) {
-        if (_listeners.count(pfd.fd)) {  // the poll is a listening socket
-            accept_new_connexion(pfd.fd);
-        } else {
-            // is it a cgi fd?
-
-            Connexion* c = _connexions[pfd.fd];
-            c->do_recv();
-            if (c->state() == Connexion::CLOSING) return;
-            pfd.events = POLLOUT;
-            // request received → build response, switch to write
-        }
-    }
-
-    // 3. Writes
-    if (pfd.revents & POLLOUT) {
-        // is it a cgi fd?
-        Connexion* c = _connexions[pfd.fd];
-        if (c->do_send() < 0) c->mark_closing();
-        if (c->state() == Connexion::CLOSING) return;
-        // HTTP/1.1: response sent but keep-alive — flip back to reading
-        pfd.events = POLLIN;
-    }
 }
 
 // Construct a Connexion and register it if no error
-void Server::accept_new_connexion(int listen_fd) {
+void Acceptor::accept_new_connexion(int listen_fd) {
     Connexion* c;
 
     try {
@@ -259,21 +224,6 @@ void Server::accept_new_connexion(int listen_fd) {
     append_to_poll(c->fd);
 }
 
-// Remove the Connexion from the list of connexions, deletes it (close the fd)
-// and remove the associated poll_fd from the vector.
-void Server::drop_connexion(Connexion* c) {
-    int fd = c->fd;
-    _connexions.erase(fd);
-    log_event("CLOSED Connexion Socket FD: " + utils::to_str(c->fd));
-    delete c;  // destructor closes the fd
-    for (size_t i = 0; i < _pollfds.size(); i++) {
-        if (_pollfds[i].fd == fd) {
-            _pollfds.erase(_pollfds.begin() + i);
-            break;
-        }
-    }
-}
-
 //  ██████████   ██████████ ███████████  █████  █████   █████████
 // ▒▒███▒▒▒▒███ ▒▒███▒▒▒▒▒█▒▒███▒▒▒▒▒███▒▒███  ▒▒███   ███▒▒▒▒▒███
 //  ▒███   ▒▒███ ▒███  █ ▒  ▒███    ▒███ ▒███   ▒███  ███     ▒▒▒
@@ -285,9 +235,9 @@ void Server::drop_connexion(Connexion* c) {
 //
 //
 
-void Server::log_info(std::string s) { std::cout << Log::color(0) << s << Log::nl; }
+void Acceptor::log_info(std::string s) { std::cout << Log::color(0) << s << Log::nl; }
 
-void Server::log_event(std::string s) {
+void Acceptor::log_event(std::string s) {
     // lets do rainbow color
     std::string bg = "\033[48;5;231m";
     std::cout << bg << "[" << Log::timestamp() << "] " << Log::bold;
@@ -299,9 +249,9 @@ void Server::log_event(std::string s) {
     std::cout << Log::nl;
 }
 
-void Server::log_error(std::string s) { Log::error(s); }
+void Acceptor::log_error(std::string s) { Log::error(s); }
 
-void Server::log_debug(std::string s) { Log::debug(s); }
+void Acceptor::log_debug(std::string s) { Log::debug(s); }
 
 std::ostream& operator<<(std::ostream& os, const sockaddr_in& addr) {
     uint32_t ip = ntohl(addr.sin_addr.s_addr);  // host byte order

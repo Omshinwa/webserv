@@ -39,7 +39,7 @@ bool Connexion::timed_out(time_t now, time_t idle_secs) const {
     return now - _last_activity > idle_secs;
 }
 
-void Connexion::do_recv() {
+void Connexion::on_readable() {
     char buf[4096];
     ssize_t n = recv(fd, buf, sizeof(buf) - 1, 0);
     if (n > 0) {
@@ -87,8 +87,10 @@ void Connexion::do_recv() {
     return;
 }
 
-ssize_t Connexion::do_send() {
-    if (_send_offset >= _send_buf.size()) return 0;
+void Connexion::on_hangup()
+
+void Connexion::on_writable() {
+    if (_send_offset >= _send_buf.size()) return;
 
     const char* buf = _send_buf.data() + _send_offset;
     size_t left = _send_buf.size() - _send_offset;
@@ -103,7 +105,8 @@ ssize_t Connexion::do_send() {
         if (_send_offset >= _send_buf.size())
             _state = CLOSING;  // HTTP/1.0-style: close after response
     }
-    return n;
+
+    if (n < 0) _state = CLOSING;
 }
 
 void Connexion::queue_response() {
@@ -116,11 +119,16 @@ void Connexion::queue_response() {
     // is it running a CGI?
     if (response.waiting_for_cgi) {
         _state = CGI_RUNNING;
-    } else {
-        _send_buf = response.build();
-        _send_offset = 0;
-        _state = WRITING;
+        return;
     }
+    on_cgi_done();
+}
+
+void Connexion::on_cgi_done() {
+    ResponseBuilder response(cgi.buffer);
+    _send_buf = response.build();
+    _send_offset = 0;
+    _state = WRITING;
 }
 
 const ServerConfig& Connexion::resolve_virtual_host(const std::string& host) const {

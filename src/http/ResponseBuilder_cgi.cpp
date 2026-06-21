@@ -28,8 +28,9 @@ bool parse_http_header_line(const std::string& line, std::string& key,
 
 }  // namespace
 
-// BORING FUNCTION TO PARSE THE CGI RESPONSE LIKE WE DID FOR THE REQUEST
-void ResponseBuilder::parse_cgi_response(std::string raw) {
+// Construct the response from the CGI's output
+ResponseBuilder::ResponseBuilder(CgiHandler& handler) {
+    std::string raw = handler.buffer;
     // 1. find the header/body separator (tolerant, like you already do)
     size_t sep = raw.find("\r\n\r\n");
     std::string delim = "\r\n";
@@ -65,7 +66,6 @@ void ResponseBuilder::parse_cgi_response(std::string raw) {
         if (!utils::parse_int(code_str, status_code)) status_code = 502;
         header.erase("status");
     }
-
     // optionally: handle Location of the CGI
 }
 

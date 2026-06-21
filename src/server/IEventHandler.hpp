@@ -7,6 +7,8 @@ class IEventHandler {
         virtual void on_readable(int fd) = 0;
         virtual void on_writable(int fd) = 0;
         virtual void on_hangup(int fd) = 0;
+
+        bool close = 0;
 };
 
 #endif

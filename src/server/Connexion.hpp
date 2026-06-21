@@ -10,9 +10,10 @@
 
 #include "../config/Config.hpp"
 #include "../http/RequestParser.hpp"
-#include "CgiHandler.hpp"
+#include "../include.hpp"
+#include "IEventHandler.hpp"
 
-class Connexion {
+class Connexion : public IEventHandler {
     public:
         enum State {
             READING,  // waiting for request bytes
@@ -42,12 +43,12 @@ class Connexion {
 
         // Pull bytes from the socket into _recv_buf.
         // Returns bytes read, 0 on peer close, -1 on error.
-        void do_recv();
+        void on_readable();
 
         // Push bytes from _send_buf to the socket, advancing _send_offset.
         // Returns bytes sent, -1 on error. Flips state to CLOSING when buffer
         // drained.
-        ssize_t do_send();
+        void on_writable();
 
         // Once you've parsed a complete request, build the response and call this.
         void queue_response();
@@ -61,6 +62,7 @@ class Connexion {
         size_t _send_offset;
 
         RequestParser request;
+        ResponseBuilder response;
 
         const std::vector<ServerConfig>& _configs;
         const ServerConfig* _active;  // resolved virtual host, NULL until header parsed

@@ -2,12 +2,14 @@
 #define RESPONSEBUILDER_H
 
 #include "../config/Config.hpp"
+#include "../include.hpp"
 #include "RequestParser.hpp"
 
 // Status-Line = HTTP-Version SP Status-Code SP Reason-Phrase CRLF
 class ResponseBuilder {
     public:
         ResponseBuilder(RequestParser& req, const ServerConfig& config);
+        ResponseBuilder(CgiHandler&);
         ~ResponseBuilder() {};
 
         std::string build();
