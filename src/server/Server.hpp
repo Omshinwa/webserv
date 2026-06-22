@@ -4,35 +4,29 @@
 #include <netinet/in.h>
 #include <poll.h>
 
-#include <map>
 #include <string>
 #include <vector>
 
 #include "../config/Config.hpp"
+#include "../event/IEventHandler.hpp"
 
-class Connexion;
+class Connection;
 
-class Server {
+class Server : public IEventHandler {
     public:
-        Server(const std::vector<ServerConfig>& configs);
+        Server(EventLoop& event_loop, const std::vector<ServerConfig>& configs);
         ~Server();
 
-        void run();  // main poll loop, blocks forever
+        int fd;
+        void on_readable();
+        void on_writable();
+        void on_tick(time_t now);
 
     private:
-        // listen_fd -> the server configs sharing that host:port (virtual hosts)
-        std::map<int, std::vector<ServerConfig> > _listeners;
-        std::vector<pollfd> _pollfds;           // list of all the poll requests
-        std::map<int, Connexion*> _connexions;  // int fd -> Connexion*
-
-        static int create_socket(const std::string& host, int port);
-        void append_to_poll(int fd);
-        void accept_new_connexion(int listen_fd);
-        void drop_connexion(Connexion* c);
-        void handle_event(pollfd& pfd);
-
+        const std::vector<ServerConfig>& configs;
+        void accept_new_connection(int listen_fd);
+        void create_socket(const std::string& host, int port);
         // LOG
-        void log_debug(std::string s);
         void log_info(std::string s);
         void log_event(std::string s);
         void log_error(std::string s);

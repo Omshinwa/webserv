@@ -27,16 +27,14 @@ bool parse_size_t(const char* s, size_t& output) {
 }
 }  // namespace
 
-// The parser shares the buffer with Connexion
+// The parser shares the buffer with Connection
 RequestParser::RequestParser(std::string& buffer)
         : state(INCOMPLETE_HEADER),
           status_code(0),
           config(NULL),
           content_length(0),
           buffer(buffer),
-          scan_pos(0) {
-    Log::debug("Request Parser Creation");
-}
+          scan_pos(0) {}
 
 RequestParser::~RequestParser() {}
 
@@ -168,7 +166,7 @@ void RequestParser::parse() {
     }
 }
 
-// Called by the Connexion with the virtual host it resolved from get_host().
+// Called by the Connection with the virtual host it resolved from get_host().
 // This is where we know client_max_body_size, so the 413 check lives here.
 void RequestParser::set_config(const ServerConfig& cfg) {
     config = &cfg;

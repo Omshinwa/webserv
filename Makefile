@@ -1,6 +1,6 @@
 NAME		=	webserv
 
-INCLUDES	=	-I src -I src/util -I src/server -I src/http
+INCLUDES	=	-I src -I src/utils -I src/server -I src/http -I src/event -I src/cgi
 
 CXX			=	c++ -Wall -Wextra -Werror -std=c++98 -g3 -MMD -MP $(INCLUDES)
 
@@ -11,13 +11,15 @@ SRC			=	src/main.cpp					\
 				src/utils/Log.cpp				\
 				src/utils/Utils.cpp				\
 				src/utils/Utils_str.cpp			\
-				src/server/Connexion.cpp		\
+				src/server/Connection.cpp		\
 				src/server/Server.cpp			\
-				src/server/signal.cpp			\
+				src/cgi/CgiHandler.cpp			\
+				src/cgi/CgiProcess.cpp			\
 				src/http/RequestParser.cpp		\
 				src/http/ResponseBuilder.cpp	\
 				src/http/ResponseBuilder_cgi.cpp\
-				src/http/CgiProcess.cpp			\
+				src/event/EventLoop.cpp			\
+				src/event/signal.cpp			\
 
 OBJ			=	$(SRC:.cpp=.o)
 

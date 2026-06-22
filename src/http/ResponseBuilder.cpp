@@ -153,7 +153,6 @@ void ResponseBuilder::find_location(RequestParser& req, const ServerConfig& conf
         Log::error("Couldnt find the page, 404");
         status_code = 404;
     }
-
     location = best;
 }
 
@@ -212,7 +211,7 @@ void ResponseBuilder::handle_get(RequestParser& req, const ServerConfig& config)
         return;
     }
 
-    if (handle_cgi(req, config, filepath)) return;
+    if (is_cgi_request(filepath)) return;
 
     // Static file: must be readable.
     if (!utils::is_readable(filepath)) {
@@ -233,6 +232,12 @@ void ResponseBuilder::handle_get(RequestParser& req, const ServerConfig& config)
 
 void ResponseBuilder::handle_post(RequestParser& req, const ServerConfig& config) {
     const std::string& root = location->has_root ? location->root : config.root;
+
+    // POST to an existing CGI script runs it (the body is piped to the script's
+    // stdin) rather than treating the request as a file upload.
+    std::string script_path = utils::join_path(root, req.URI);
+    if (utils::is_regular_file(script_path) && is_cgi_request(script_path)) return;
+
     std::string upload_path;
 
     if (location->has_upload) {
@@ -329,8 +334,9 @@ void ResponseBuilder::handle_method(RequestParser& req, const ServerConfig& conf
         status_code = 501;
 }
 
+// constructor from request and config
 ResponseBuilder::ResponseBuilder(RequestParser& req, const ServerConfig& config)
-        : protocol("HTTP/1.0"), location(NULL) {
+        : waiting_for_cgi(false), protocol("HTTP/1.0"), location(NULL) {
     header["connection"] = "close";
 
     if (req.get_status_code() != 0)  // theres an error

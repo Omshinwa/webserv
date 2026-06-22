@@ -1,45 +1,57 @@
 
-#include "Connexion.hpp"
+#include "Connection.hpp"
 
-#include <fcntl.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
 #include <cstring>
 #include <ctime>
 
+#include "../event/EventLoop.hpp"
 #include "../http/ResponseBuilder.hpp"
 #include "../utils/Log.hpp"
 #include "../utils/Utils.hpp"
 
-// Connexion handles the buffers for reading and writing
+namespace {
+const time_t CONNECTION_TIMEOUT_SEC = 10;
+}  // namespace
+
+// Connection handles the buffers for reading and writing
 // It creates the Request and Response
-Connexion::Connexion(int fd, const std::vector<ServerConfig>& configs)
-        : fd(fd),
-          _state(READING),
+Connection::Connection(EventLoop& event_loop, int fd,
+                       const std::vector<ServerConfig>& configs, sockaddr_in addr)
+        : IEventHandler(event_loop),
+          fd(fd),
+          cgi(NULL),
           _send_offset(0),
           request(_recv_buf),
           _configs(configs),
-          _active(NULL),
-          _last_activity(time(NULL)) {
-    fcntl(fd, F_SETFL, O_NONBLOCK);
+          _active(NULL) {
+    touch();
+    uint32_t ip = ntohl(addr.sin_addr.s_addr);  // host byte order
+    remote_addr = utils::to_str((ip >> 24) & 0xFF) + "." +
+                  utils::to_str((ip >> 16) & 0xFF) + "." +
+                  utils::to_str((ip >> 8) & 0xFF) + "." + utils::to_str(ip & 0xFF);
 }
 
-Connexion::~Connexion() {
-    if (fd >= 0) close(fd);
+Connection::~Connection() {
+    // The CgiHandler is owned by the event loop, not by us. If one is still in
+    // flight when we're torn down (client gone mid-CGI, or shutdown), just drop
+    // its back-pointer so it won't call on_cgi_done() into freed memory;
+    if (cgi) cgi->_owner = NULL;
 }
 
-Connexion::State Connexion::state() const { return _state; }
+void Connection::on_tick(time_t now) {
+    if (cgi && !cgi->finished) return;
 
-void Connexion::mark_closing() { _state = CLOSING; }
-
-void Connexion::touch() { _last_activity = time(NULL); }
-
-bool Connexion::timed_out(time_t now, time_t idle_secs) const {
-    return now - _last_activity > idle_secs;
+    bool timed_out = (now - _last_activity > CONNECTION_TIMEOUT_SEC);
+    if (timed_out) {
+        log_event("TIMEOUT Connection Socket FD: " + utils::to_str(fd));
+        finished = true;
+    }
 }
 
-void Connexion::do_recv() {
+void Connection::on_readable() {
     char buf[4096];
     ssize_t n = recv(fd, buf, sizeof(buf) - 1, 0);
     if (n > 0) {
@@ -60,19 +72,16 @@ void Connexion::do_recv() {
             request.parse();
         }
     } else if (n == 0) {
-        _state = CLOSING;  // peer closed cleanly
+        this->finished = true;  // peer closed cleanly
     } else {
         log_error("recv returned a negative number");
-        _state = CLOSING;  // some error
+        this->finished = true;  // some error
     }
 
-    // Log::info("parse state: " + utils::to_str(request.get_state()));
     switch (request.get_state()) {
         case RequestParser::INCOMPLETE_HEADER:
             break;
         case RequestParser::AWAITING_CONFIG:
-            // Transient: set_config() runs synchronously above, so by here the
-            // state has already moved on. Listed to satisfy -Wswitch.
             break;
         case RequestParser::INCOMPLETE_BODY:
             break;
@@ -87,8 +96,8 @@ void Connexion::do_recv() {
     return;
 }
 
-ssize_t Connexion::do_send() {
-    if (_send_offset >= _send_buf.size()) return 0;
+void Connection::on_writable() {
+    if (_send_offset >= _send_buf.size()) return;
 
     const char* buf = _send_buf.data() + _send_offset;
     size_t left = _send_buf.size() - _send_offset;
@@ -99,25 +108,72 @@ ssize_t Connexion::do_send() {
         log_event("> SENT to file descriptor " + utils::to_str(fd));
         log_info(buf);
 
-        _send_offset += n;  // update the offset buffer
+        _send_offset += n;
+        // did we send everything
         if (_send_offset >= _send_buf.size())
-            _state = CLOSING;  // HTTP/1.0-style: close after response
+            finished = true;  // HTTP/1.0-style: close after response
+    } else if (n == 0) {
+        this->finished = true;
+    } else {
+        log_error("send returned a negative number");
+        this->finished = true;
     }
-    return n;
 }
 
-void Connexion::queue_response() {
-    // _active may be NULL if we errored before parsing the Host header (e.g. a
-    // 400 on a malformed header); fall back to the default server block.
+void Connection::queue_response() {
+    // _active may be NULL if we errored before parsing the Host header;
+    // fall back to the default server block.
     const ServerConfig& config = _active ? *_active : _configs[0];
     request.remote_addr = remote_addr;
     ResponseBuilder response(request, config);
+
+    // Async CGI: hand off to the event loop. The CgiHandler will call
+    // on_cgi_done() once the script exits; nothing here blocks.
+    if (response.waiting_for_cgi) {
+        start_cgi(response.cgi_interpreter, response.cgi_filepath, config);
+        return;
+    }
+
     _send_buf = response.build();
     _send_offset = 0;
-    _state = WRITING;
+    // Response is ready: stop waiting to read, start waiting to write. on_writable
+    // drains _send_buf and sets finished once the whole response has gone out.
+    event_loop.set_events(fd, POLLOUT);
 }
 
-const ServerConfig& Connexion::resolve_virtual_host(const std::string& host) const {
+void Connection::start_cgi(const std::string& interpreter, const std::string& filepath,
+                           const ServerConfig& config) {
+    cgi = new CgiHandler(event_loop, request, config, interpreter, filepath);
+    cgi->_owner = this;
+
+    // fork()/pipe() failed -> answer immediately (exec_status is a 5xx). The
+    // pipes were never registered, so the loop never took ownership: build the
+    // error response and free the handler ourselves (~CgiHandler nulls cgi).
+    if (cgi->cgi.exec_status >= 400) {
+        on_cgi_done(*cgi);
+        delete cgi;
+        cgi = NULL;
+        return;
+    }
+
+    // Poll both pipe ends: read the script's stdout, write its stdin. Hand the
+    // handler's lifetime to the loop (owned=true): once it's finished with no
+    // fds left, the loop closes the pipes and frees it. The client socket goes
+    // idle (events 0) until the CGI completes and calls back into on_cgi_done().
+    event_loop.register_fd(cgi->cgi.fd[0], POLLIN, cgi, true);
+    event_loop.register_fd(cgi->cgi.in_fd[1], POLLOUT, cgi, true);
+    event_loop.set_events(fd, 0);
+}
+
+void Connection::on_cgi_done(CgiHandler& cgi) {
+    touch();
+    ResponseBuilder response(cgi);
+    _send_buf = response.build();
+    _send_offset = 0;
+    event_loop.set_events(fd, POLLOUT);
+}
+
+const ServerConfig& Connection::resolve_virtual_host(const std::string& host) const {
     // Strip any :port suffix from the Host header before matching.
     std::string name = host.substr(0, host.find(':'));
 
@@ -140,14 +196,14 @@ const ServerConfig& Connexion::resolve_virtual_host(const std::string& host) con
 //
 //
 
-void Connexion::log_debug(std::string s) {
+void Connection::log_debug(std::string s) {
     Log::color_idx = fd;
     if (s.size() > 200) {  // only display the first 200 characters
         Log::debug(s.substr(0, 200) + "\n...");
     } else
         Log::debug(s);
 }
-void Connexion::log_info(std::string s) {
+void Connection::log_info(std::string s) {
     Log::color_idx = fd;
     if (s.size() > 200) {  // only display the first 200 characters
         Log::info(s.substr(0, 200) + "\n...");
@@ -155,12 +211,12 @@ void Connexion::log_info(std::string s) {
         Log::info(s);
 }
 
-void Connexion::log_event(std::string s) {
+void Connection::log_event(std::string s) {
     Log::color_idx = fd;
     Log::event(s);
 }
 
-void Connexion::log_error(std::string s) {
+void Connection::log_error(std::string s) {
     Log::color_idx = fd;
     Log::error(s);
 }
