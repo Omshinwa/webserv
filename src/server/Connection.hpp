@@ -36,7 +36,7 @@ class Connection : public IEventHandler {
         // client socket idles until on_cgi_done() fires.
         void start_cgi(const std::string& interpreter, const std::string& filepath,
                        const ServerConfig& config);
-        void on_cgi_done();
+        void on_cgi_done(CgiHandler& cgi);
         // Owned, async CGI handler. NULL until a CGI request is dispatched; the
         // synchronous CGI path (CgiProcess in ResponseBuilder) leaves it unused.
         CgiHandler* cgi;

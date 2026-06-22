@@ -24,6 +24,26 @@ bool EventLoop::has_registered_fd(IEventHandler* h) const {
     return false;
 }
 
+void EventLoop::unregister_fd(int fd) {
+    fd_to_handler.erase(fd);
+    close(fd);
+    for (size_t i = 0; i < _pollfds.size(); i++) {
+        if (_pollfds[i].fd == fd) {
+            _pollfds.erase(_pollfds.begin() + i);
+            break;
+        }
+    }
+}
+
+void EventLoop::set_events(int fd, short events) {
+    for (size_t i = 0; i < _pollfds.size(); i++) {
+        if (_pollfds[i].fd == fd) {
+            _pollfds[i].events = events;
+            return;
+        }
+    }
+}
+
 // poll uses events and revents:
 // events  = your question  → "is this fd readable? writable?"
 // revents = the answer     → "yes readable / yes writable / hung up / error"
@@ -36,7 +56,7 @@ void EventLoop::run() {
         if (n < 0) {
             if (webserv::g_stop)  // signal interrupted
             {
-                Log::error("SIGNAL INTERRUPT");
+                Log::event("SIGNAL INTERRUPT");
                 continue;
             }
             Log::error("poll error");
@@ -92,27 +112,6 @@ void EventLoop::run() {
     for (std::set<IEventHandler*>::iterator it = dead.begin(); it != dead.end(); ++it)
         delete *it;
     _owned.clear();
-}
-
-void EventLoop::set_events(int fd, short events) {
-    for (size_t i = 0; i < _pollfds.size(); i++) {
-        if (_pollfds[i].fd == fd) {
-            _pollfds[i].events = events;
-            return;
-        }
-    }
-}
-
-void EventLoop::unregister_fd(int fd) {
-    fd_to_handler.erase(fd);
-    Log::event("CLOSED Event FD: " + utils::to_str(fd));
-    close(fd);
-    for (size_t i = 0; i < _pollfds.size(); i++) {
-        if (_pollfds[i].fd == fd) {
-            _pollfds.erase(_pollfds.begin() + i);
-            break;
-        }
-    }
 }
 
 void EventLoop::handle_event(pollfd& pfd) {

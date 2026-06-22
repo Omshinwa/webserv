@@ -5,6 +5,10 @@
 #include <iostream>
 #include <sstream>
 
+namespace {
+const std::string black = "\033[30m";
+}
+
 Log::Level Log::_level = Log::INFO;
 
 int Log::color_idx = 0;
@@ -109,12 +113,12 @@ void Log::debug(const std::string& s) {
 void Log::info(const std::string& s) { std::cout << color(color_idx) << s << nl; }
 
 void Log::event(const std::string s) {
-    std::cout << background(color_idx) << "[" << timestamp() << "] " << s << nl;
+    std::cout << background(color_idx) << black << "[" << timestamp() << "] " << s << nl;
 }
 
 // not used
 void Log::warning(const std::string& s) {
-    std::cout << background(color_idx) << "[" << timestamp() << "] " << s << nl;
+    std::cout << background(color_idx) << black << "[" << timestamp() << "] " << s << nl;
 }
 
 void Log::error(const std::string& s) {

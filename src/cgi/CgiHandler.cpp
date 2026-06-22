@@ -85,5 +85,5 @@ void CgiHandler::complete() {
         cgi.in_fd[1] = -1;
     }
     finished = true;
-    if (_owner) _owner->on_cgi_done();
+    if (_owner) _owner->on_cgi_done(*this);
 }

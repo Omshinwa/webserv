@@ -153,7 +153,7 @@ void Connection::start_cgi(const std::string& interpreter, const std::string& fi
 
     // fork()/pipe() failed -> answer immediately (exec_status is a 5xx).
     if (cgi->cgi.exec_status >= 400) {
-        on_cgi_done();
+        on_cgi_done(*cgi);
         return;
     }
 
@@ -165,9 +165,9 @@ void Connection::start_cgi(const std::string& interpreter, const std::string& fi
     event_loop.set_events(fd, 0);
 }
 
-void Connection::on_cgi_done() {
+void Connection::on_cgi_done(CgiHandler& cgi) {
     touch();
-    ResponseBuilder response(*cgi);
+    ResponseBuilder response(cgi);
     _send_buf = response.build();
     _send_offset = 0;
     event_loop.set_events(fd, POLLOUT);
