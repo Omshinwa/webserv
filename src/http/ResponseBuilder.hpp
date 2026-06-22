@@ -2,7 +2,7 @@
 #define RESPONSEBUILDER_H
 
 #include "../config/Config.hpp"
-#include "../server/CgiHandler.hpp"
+#include "../cgi/CgiHandler.hpp"
 #include "RequestParser.hpp"
 
 // Status-Line = HTTP-Version SP Status-Code SP Reason-Phrase CRLF
@@ -34,8 +34,7 @@ class ResponseBuilder {
         void handle_get(RequestParser& req, const ServerConfig& config);
         void handle_post(RequestParser& req, const ServerConfig& config);
         void handle_delete(RequestParser& req, const ServerConfig& config);
-        bool handle_cgi(const RequestParser& req, const ServerConfig& config,
-                        const std::string& filepath);
+        bool handle_cgi(const std::string& filepath);
 
         void parse_cgi_response(std::string raw);
 

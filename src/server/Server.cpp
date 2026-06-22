@@ -1,7 +1,6 @@
 #include "Server.hpp"
 
 #include <arpa/inet.h>
-#include <fcntl.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -43,8 +42,8 @@ void Server::create_socket(const std::string& host, int port) {
 
         int opt = 1;  // Allows to restart without TIME_WAIT
         setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-
-        fcntl(fd, F_SETFL, O_NONBLOCK);  // non blocking for macos
+        // The fd is made non-blocking when the loop registers it
+        // (EventLoop::register_fd), before any accept() can run.
     }
 
     // binds it
@@ -83,9 +82,9 @@ Server::~Server() {
 void Server::on_readable() { accept_new_connection(fd); }
 void Server::on_writable() { Log::error("This should never display"); }
 void Server::on_tick(time_t now) {
+    // A server never hangs up.
     (void)now;
     return;
-    // A server never hangs up.
 }
 
 // Construct a Connection and register it if no error
@@ -97,14 +96,8 @@ void Server::accept_new_connection(int listen_fd) {
         socklen_t len = sizeof(addr);
         int connection_fd = accept(listen_fd, (struct sockaddr*)&addr, &len);
         if (connection_fd < 0) throw std::runtime_error(std::strerror(errno));
-        c = new Connection(event_loop, connection_fd, configs);
+        c = new Connection(event_loop, connection_fd, configs, addr);
 
-        uint32_t ip = ntohl(addr.sin_addr.s_addr);  // host byte order
-        c->remote_addr = utils::to_str((ip >> 24) & 0xFF) + "." +
-                         utils::to_str((ip >> 16) & 0xFF) + "." +
-                         utils::to_str((ip >> 8) & 0xFF) + "." + utils::to_str(ip & 0xFF);
-        // Hand the new client fd to the loop so it actually gets polled. The
-        // loop owns the Connection now: it deletes it once it's finished.
         event_loop.register_fd(c->fd, POLLIN, c, true);
         log_event("NEW Connection Socket FD: " + utils::to_str(c->fd));
     } catch (const std::exception& e) {

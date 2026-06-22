@@ -15,7 +15,7 @@
 #include <vector>
 
 #include "../event/IEventHandler.hpp"
-#include "../http/CgiProcess.hpp"
+#include "CgiProcess.hpp"
 #include "../utils/Log.hpp"
 #include "../utils/Utils.hpp"
 

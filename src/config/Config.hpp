@@ -48,6 +48,8 @@ class Config {
 
     public:
         static std::vector<ServerConfig> parse(const std::string& path);
+        static std::map<std::string, std::vector<ServerConfig> > group_by_host_port(
+                const std::vector<ServerConfig>& configs);
 };
 
 #endif

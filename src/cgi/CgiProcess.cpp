@@ -1,6 +1,5 @@
 #include "CgiProcess.hpp"
 
-#include <fcntl.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -72,12 +71,11 @@ CgiProcess::CgiProcess(const RequestParser& req, const ServerConfig& config,
     } else if (pid > 0) {
         // Parent keeps fd[0] (reads the child's stdout) and in_fd[1] (writes the
         // child's stdin); the matching ends belong to the child. Both kept ends
-        // go non-blocking so the event loop can drive them without ever stalling
+        // are made non-blocking when the loop registers them
+        // (EventLoop::register_fd), so it can drive them without ever stalling
         // the single thread — no read/write/waitpid loop here anymore.
         close(fd[1]);
         close(in_fd[0]);
-        fcntl(fd[0], F_SETFL, O_NONBLOCK);
-        fcntl(in_fd[1], F_SETFL, O_NONBLOCK);
     } else {
         close(fd[0]);
         close(fd[1]);
@@ -89,8 +87,10 @@ CgiProcess::CgiProcess(const RequestParser& req, const ServerConfig& config,
     }
 }
 
-// Called by CgiHandler once the child closes its stdout (EOF). The child has
-// already exited or is exiting, so this won't block long.
+// Called by CgiHandler once the child closes its stdout (EOF).
+// -> reap it and turn the exit status into an HTTP status (200 / 502 / 504), stored in
+// exec_status. Clears pid. The child has already exited or is exiting, so this won't
+// block long.
 void CgiProcess::reap() {
     if (pid <= 0) {
         exec_status = 500;
@@ -108,6 +108,7 @@ void CgiProcess::reap() {
     pid = -1;
 }
 
+// Force-kill a still-running child and reap it.
 void CgiProcess::kill_child() {
     if (pid <= 0) return;
     kill(pid, SIGKILL);

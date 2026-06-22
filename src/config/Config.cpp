@@ -291,3 +291,17 @@ std::vector<ServerConfig> Config::parse(const std::string& path) {
     }
     return servers;
 }
+
+// Group server blocks by "host:port" so each unique endpoint gets its own
+// listening socket. Blocks that share an endpoint travel together as that
+// socket's virtual hosts; the first one listed stays first and acts as the
+// default server for that endpoint.
+std::map<std::string, std::vector<ServerConfig> > Config::group_by_host_port(
+        const std::vector<ServerConfig>& configs) {
+    std::map<std::string, std::vector<ServerConfig> > groups;
+    for (size_t i = 0; i < configs.size(); ++i) {
+        std::string key = configs[i].host + ":" + utils::to_str(configs[i].port);
+        groups[key].push_back(configs[i]);
+    }
+    return groups;
+}

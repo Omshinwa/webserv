@@ -45,10 +45,10 @@
 #include "event/EventLoop.hpp"
 #include "event/IEventHandler.hpp"
 //
-#include "http/CgiProcess.hpp"
+#include "cgi/CgiHandler.hpp"
+#include "cgi/CgiProcess.hpp"
 #include "http/RequestParser.hpp"
 #include "http/ResponseBuilder.hpp"
-#include "server/CgiHandler.hpp"
 #include "server/Connection.hpp"
 #include "server/Server.hpp"
 #include "server/signal.hpp"

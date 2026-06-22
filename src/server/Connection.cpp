@@ -1,7 +1,6 @@
 
 #include "Connection.hpp"
 
-#include <fcntl.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -20,16 +19,19 @@ const time_t CONNECTION_TIMEOUT_SEC = 10;
 // Connection handles the buffers for reading and writing
 // It creates the Request and Response
 Connection::Connection(EventLoop& event_loop, int fd,
-                       const std::vector<ServerConfig>& configs)
+                       const std::vector<ServerConfig>& configs, sockaddr_in addr)
         : IEventHandler(event_loop),
           fd(fd),
           cgi(NULL),
           _send_offset(0),
           request(_recv_buf),
           _configs(configs),
-          _active(NULL),
-          _last_activity(time(NULL)) {
-    fcntl(fd, F_SETFL, O_NONBLOCK);
+          _active(NULL) {
+    touch();
+    uint32_t ip = ntohl(addr.sin_addr.s_addr);  // host byte order
+    remote_addr = utils::to_str((ip >> 24) & 0xFF) + "." +
+                  utils::to_str((ip >> 16) & 0xFF) + "." +
+                  utils::to_str((ip >> 8) & 0xFF) + "." + utils::to_str(ip & 0xFF);
 }
 
 Connection::~Connection() {
@@ -44,11 +46,7 @@ Connection::~Connection() {
     delete cgi;
 }
 
-void Connection::touch() { _last_activity = time(NULL); }
-
 void Connection::on_tick(time_t now) {
-    // While a CGI is in flight the socket is parked; the CgiHandler runs its own
-    // timeout, so don't also trip the idle-connection timeout here.
     if (cgi && !cgi->finished) return;
 
     bool timed_out = (now - _last_activity > CONNECTION_TIMEOUT_SEC);
@@ -85,13 +83,10 @@ void Connection::on_readable() {
         this->finished = true;  // some error
     }
 
-    // Log::info("parse state: " + utils::to_str(request.get_state()));
     switch (request.get_state()) {
         case RequestParser::INCOMPLETE_HEADER:
             break;
         case RequestParser::AWAITING_CONFIG:
-            // Transient: set_config() runs synchronously above, so by here the
-            // state has already moved on. Listed to satisfy -Wswitch.
             break;
         case RequestParser::INCOMPLETE_BODY:
             break;
@@ -118,17 +113,21 @@ void Connection::on_writable() {
         log_event("> SENT to file descriptor " + utils::to_str(fd));
         log_info(buf);
 
-        _send_offset += n;  // update the offset buffer
+        _send_offset += n;
+        // did we send everything
         if (_send_offset >= _send_buf.size())
             finished = true;  // HTTP/1.0-style: close after response
+    } else if (n == 0) {
+        this->finished = true;
+    } else {
+        log_error("send returned a negative number");
+        this->finished = true;
     }
-
-    if (n < 0) finished = true;
 }
 
 void Connection::queue_response() {
-    // _active may be NULL if we errored before parsing the Host header (e.g. a
-    // 400 on a malformed header); fall back to the default server block.
+    // _active may be NULL if we errored before parsing the Host header;
+    // fall back to the default server block.
     const ServerConfig& config = _active ? *_active : _configs[0];
     request.remote_addr = remote_addr;
     ResponseBuilder response(request, config);

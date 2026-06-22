@@ -9,11 +9,12 @@ const int POLL_TIMEOUT_MS = 3000;
 void EventLoop::register_fd(int fd, int events, IEventHandler* handler, bool owned) {
     pollfd polling_req;
     polling_req.fd = fd;
-    polling_req.events = events;  // POLLIN;
+    polling_req.events = events;  // POLLIN or POLLOUT;
     polling_req.revents = 0;
     _pollfds.push_back(polling_req);
     fd_to_handler[fd] = handler;
     if (owned) _owned.insert(handler);
+    fcntl(fd, F_SETFL, O_NONBLOCK);
 }
 
 bool EventLoop::has_registered_fd(IEventHandler* h) const {
@@ -106,7 +107,6 @@ void EventLoop::unregister_fd(int fd) {
     fd_to_handler.erase(fd);
     Log::event("CLOSED Event FD: " + utils::to_str(fd));
     close(fd);
-    // should the EventLoop close the fd, or the Connection...?
     for (size_t i = 0; i < _pollfds.size(); i++) {
         if (_pollfds[i].fd == fd) {
             _pollfds.erase(_pollfds.begin() + i);

@@ -212,7 +212,7 @@ void ResponseBuilder::handle_get(RequestParser& req, const ServerConfig& config)
         return;
     }
 
-    if (handle_cgi(req, config, filepath)) {
+    if (handle_cgi(filepath)) {
         // handle_cgi runs the CGI synchronously and fills in status/body.
         return;
     }
@@ -239,7 +239,7 @@ void ResponseBuilder::handle_post(RequestParser& req, const ServerConfig& config
     // POST to an existing CGI script runs it (the body is piped to the script's
     // stdin) rather than treating the request as a file upload.
     std::string script_path = utils::join_path(root, req.URI);
-    if (utils::is_regular_file(script_path) && handle_cgi(req, config, script_path)) return;
+    if (utils::is_regular_file(script_path) && handle_cgi(script_path)) return;
 
     std::string upload_path;
 

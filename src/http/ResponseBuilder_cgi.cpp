@@ -2,14 +2,13 @@
 #include <cstring>
 
 #include "../utils/Utils.hpp"
-#include "CgiProcess.hpp"
+#include "../cgi/CgiProcess.hpp"
 #include "RequestParser.hpp"
 #include "ResponseBuilder.hpp"
 
 namespace {
 // parse a single line in a http header
-// from "Content-Length: 50"
-// -> header[content-length] = 50
+// "Content-Length: 50" -> header[content-length] = 50
 bool parse_http_header_line(const std::string& line, std::string& key,
                             std::string& value) {
     // std::string key, value;
@@ -83,8 +82,7 @@ void ResponseBuilder::parse_cgi_response(std::string raw) {
 
 // Is this a CGI? if so, handle it and return true
 // otherwise return false
-bool ResponseBuilder::handle_cgi(const RequestParser& req, const ServerConfig& config,
-                                 const std::string& filepath) {
+bool ResponseBuilder::handle_cgi(const std::string& filepath) {
     // CGI: does this file's extension map to a configured handler?
     const std::string* interpreter = NULL;
     for (std::map<std::string, std::string>::const_iterator it = location->cgi.begin();
@@ -98,8 +96,6 @@ bool ResponseBuilder::handle_cgi(const RequestParser& req, const ServerConfig& c
     }
     if (interpreter == NULL) return false;
     // note: the interpreter can be equal to the empty string
-    (void)req;
-    (void)config;
 
     // Don't run it here — that would block the event loop. Flag the request as
     // CGI and stash what's needed; Connection::queue_response() forks the script

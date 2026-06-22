@@ -34,27 +34,13 @@
 #include "event/EventLoop.hpp"
 #include "event/IEventHandler.hpp"
 //
-#include "http/CgiProcess.hpp"
+#include "cgi/CgiHandler.hpp"
+#include "cgi/CgiProcess.hpp"
 #include "http/RequestParser.hpp"
 #include "http/ResponseBuilder.hpp"
-#include "server/CgiHandler.hpp"
 #include "server/Connection.hpp"
 #include "server/Server.hpp"
 #include "server/signal.hpp"
-
-// Group server blocks by "host:port" so each unique endpoint gets its own
-// listening socket. Blocks that share an endpoint travel together as that
-// socket's virtual hosts; the first one listed stays first and acts as the
-// default server for that endpoint (insertion order is preserved per group).
-std::map<std::string, std::vector<ServerConfig> > group_by_host_port(
-        const std::vector<ServerConfig>& configs) {
-    std::map<std::string, std::vector<ServerConfig> > groups;
-    for (size_t i = 0; i < configs.size(); ++i) {
-        std::string key = configs[i].host + ":" + utils::to_str(configs[i].port);
-        groups[key].push_back(configs[i]);
-    }
-    return groups;
-}
 
 int main(int ac, char** av) {
     if (ac > 2) {
@@ -70,13 +56,13 @@ int main(int ac, char** av) {
         // One listening socket per unique host:port. `groups` must outlive the
         // Servers: each Server keeps a reference into it for virtual-host lookup.
         std::map<std::string, std::vector<ServerConfig> > groups =
-                group_by_host_port(configs);
+                Config::group_by_host_port(configs);
         EventLoop event_loop;
 
         for (std::map<std::string, std::vector<ServerConfig> >::iterator it =
                      groups.begin();
              it != groups.end(); ++it) {
-            Server* s = new Server(event_loop, it->second);  // binds ONE socket, keeps the group
+            Server* s = new Server(event_loop, it->second);
             servers.push_back(s);
             event_loop.register_fd(s->fd, POLLIN, s);
         }

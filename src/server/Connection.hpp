@@ -8,15 +8,10 @@
 #include <string>
 #include <vector>
 
+#include "../cgi/CgiHandler.hpp"
 #include "../config/Config.hpp"
 #include "../event/IEventHandler.hpp"
 #include "../http/RequestParser.hpp"
-#include "CgiHandler.hpp"
-
-typedef struct cgi_communication {
-        std::string remote_addr;
-
-} t_cgi_com;
 
 class Connection : public IEventHandler {
     public:
@@ -28,10 +23,8 @@ class Connection : public IEventHandler {
         // configs: all server blocks sharing this listening socket; used to
         // resolve the virtual host once the request's Host header is known.
         Connection(EventLoop& event_loop, int listen_fd,
-                   const std::vector<ServerConfig>& configs);
+                   const std::vector<ServerConfig>& configs, sockaddr_in addr);
         ~Connection();
-
-        void touch();
 
         void on_readable();
         void on_writable();
@@ -59,7 +52,7 @@ class Connection : public IEventHandler {
         const std::vector<ServerConfig>& _configs;
         const ServerConfig* _active;  // resolved virtual host, NULL until header parsed
 
-        time_t _last_activity;  // last successful recv/send; drives the idle timeout
+        // touch() / _last_activity (the idle-timeout clock) come from IEventHandler.
 
         // Pick the server block whose server_names matches the Host header,
         // falling back to the first (default) server for this socket.

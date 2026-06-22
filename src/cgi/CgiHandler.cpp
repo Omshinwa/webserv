@@ -1,7 +1,7 @@
 #include "CgiHandler.hpp"
 
 #include "../event/EventLoop.hpp"
-#include "Connection.hpp"
+#include "../server/Connection.hpp"
 
 namespace {
 // A runaway CGI must never hang the single-threaded server. The event loop

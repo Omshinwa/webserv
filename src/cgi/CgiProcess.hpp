@@ -6,7 +6,7 @@
 #include <string>
 
 #include "../config/Config.hpp"
-#include "RequestParser.hpp"
+#include "../http/RequestParser.hpp"
 
 class CgiProcess {
     public:
@@ -14,11 +14,7 @@ class CgiProcess {
         state state;
         CgiProcess(const RequestParser& req, const ServerConfig& config,
                    const std::string& interpreter, const std::string& script_path);
-        // EOF on the child's stdout -> reap it and turn the exit status into an
-        // HTTP status (200 / 502 / 504), stored in exec_status. Clears pid.
         void reap();
-        // Force-kill a still-running child and reap it. No-op once pid is -1, so
-        // it is safe to call again during teardown.
         void kill_child();
 
         int exec_status;

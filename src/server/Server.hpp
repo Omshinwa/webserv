@@ -17,18 +17,16 @@ class Server : public IEventHandler {
         Server(EventLoop& event_loop, const std::vector<ServerConfig>& configs);
         ~Server();
 
+        int fd;
         void on_readable();
         void on_writable();
         void on_tick(time_t now);
-
-        int fd;
 
     private:
         const std::vector<ServerConfig>& configs;
         void accept_new_connection(int listen_fd);
         void create_socket(const std::string& host, int port);
         // LOG
-        void log_debug(std::string s);
         void log_info(std::string s);
         void log_event(std::string s);
         void log_error(std::string s);
