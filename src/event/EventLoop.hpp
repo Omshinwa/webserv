@@ -39,6 +39,11 @@
 // handlers
 class EventLoop {
     public:
+        // Frees every handler the loop still owns (in-flight Connections and the
+        // listening Servers), closing their fds first. Runs on normal shutdown
+        // *and* on stack unwinding if run() throws, so nothing leaks either way.
+        ~EventLoop();
+
         void run();
         void handle_event(pollfd& pfd);
 

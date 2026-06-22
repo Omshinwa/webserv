@@ -1,19 +1,38 @@
 #include "EventLoop.hpp"
 
-#include "../server/signal.hpp"
+#include "signal.hpp"
 
 namespace {
 const int POLL_TIMEOUT_MS = 3000;
 }  // namespace
 
+// Close and free every handler the loop owns (in-flight Connections and the
+// listening Servers), which also tears down any CGI pipes and reaps children.
+// A handler can span several fds (a CgiHandler owns two pipes), so unregister
+// every owned fd first, then delete each owned handler exactly once.
+EventLoop::~EventLoop() {
+    std::set<IEventHandler*> dead = _owned;
+    for (size_t i = 0; i < _pollfds.size();) {
+        if (_owned.count(fd_to_handler[_pollfds[i].fd]))
+            unregister_fd(_pollfds[i].fd);
+        else
+            ++i;
+    }
+    for (std::set<IEventHandler*>::iterator it = dead.begin(); it != dead.end(); ++it)
+        delete *it;
+    _owned.clear();
+}
+
+// events = POLLIN or POLLOUT;
 void EventLoop::register_fd(int fd, int events, IEventHandler* handler, bool owned) {
+    // Take ownership first: if a push_back below throws, ~EventLoop still frees it.
+    if (owned) _owned.insert(handler);
     pollfd polling_req;
     polling_req.fd = fd;
-    polling_req.events = events;  // POLLIN or POLLOUT;
+    polling_req.events = events;
     polling_req.revents = 0;
     _pollfds.push_back(polling_req);
     fd_to_handler[fd] = handler;
-    if (owned) _owned.insert(handler);
     fcntl(fd, F_SETFL, O_NONBLOCK);
 }
 
@@ -69,58 +88,40 @@ void EventLoop::run() {
             handle_event(_pollfds[i]);
         }
 
-        // Idle / timeout pass. Snapshot the handlers first (a handler owns
-        // several fds, and a timing-out CGI unregisters its pipes from inside
-        // on_tick) so we tick each one exactly once over a stable set.
+        // Idle / timeout pass.
+        // CgiHandler spans two fds and so gets ticked twice; the second tick is a no-op
+        // once the first flipped it finished.
         time_t now = time(NULL);
-        std::set<IEventHandler*> handlers;
         for (size_t i = 0; i < _pollfds.size(); ++i)
-            handlers.insert(fd_to_handler[_pollfds[i].fd]);
-        for (std::set<IEventHandler*>::iterator it = handlers.begin();
-             it != handlers.end(); ++it)
-            (*it)->on_tick(now);
+            fd_to_handler[_pollfds[i].fd]->on_tick(now);
 
         // Reap finished fds, and delete owned handlers once their last fd is
-        // gone. Deletion is deferred to after the scan because ~Connection
-        // unregisters its CgiHandler's pipes (mutating _pollfds).
-        std::vector<IEventHandler*> dead;
+        // gone. A handler can span several fds (a CgiHandler owns two pipes), so
+        // the has_registered_fd() guard it.
+        // Safe ONLY because no destructor unregisters fds (mutates _pollfds);
         for (size_t i = 0; i < _pollfds.size();) {
             IEventHandler* h = fd_to_handler[_pollfds[i].fd];
             if (h->finished) {
                 unregister_fd(_pollfds[i].fd);
                 if (_owned.count(h) && !has_registered_fd(h)) {
                     _owned.erase(h);
-                    dead.push_back(h);
+                    delete h;
                 }
             } else {
                 ++i;
             }
         }
-        for (size_t i = 0; i < dead.size(); ++i) delete dead[i];
     }
-
-    // Graceful shutdown: close and free every handler the loop owns (in-flight
-    // Connections), which also tears down any CGI pipes and reaps its child.
-    // The listening sockets belong to main's Servers, so we leave those alone.
-    std::set<IEventHandler*> dead = _owned;
-    for (size_t i = 0; i < _pollfds.size();) {
-        if (_owned.count(fd_to_handler[_pollfds[i].fd]))
-            unregister_fd(_pollfds[i].fd);
-        else
-            ++i;
-    }
-    for (std::set<IEventHandler*>::iterator it = dead.begin(); it != dead.end(); ++it)
-        delete *it;
-    _owned.clear();
 }
 
 void EventLoop::handle_event(pollfd& pfd) {
     IEventHandler* h = fd_to_handler[pfd.fd];
     int revents = pfd.revents;
-    // POLLHUP = peer closed its end (e.g. a CGI child that exited), POLLERR =
-    // broken pipe/socket. Route both through on_readable so the handler reacts
-    // itself (read()==0 is a graceful EOF, read()<0 a clean abort) instead of
-    // being torn down behind its back. POLLNVAL means the fd isn't even open.
+    // POLLHUP = peer closed its end (e.g. a CGI child that exited)
+    // POLLERR = broken pipe/socket.
+    // Route both through on_readable so the handler reacts itself
+    // (read()==0 is a graceful EOF, read()<0 a clean abort)
+    // POLLNVAL means the fd isn't even open.
     if (revents & (POLLIN | POLLHUP | POLLERR)) h->on_readable();
     if (revents & POLLOUT) h->on_writable();
     if (revents & POLLNVAL) h->finished = true;

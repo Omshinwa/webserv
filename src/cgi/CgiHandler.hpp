@@ -25,6 +25,7 @@ class CgiHandler : public IEventHandler {
     public:
         CgiHandler(EventLoop& event_loop, RequestParser& req, const ServerConfig& config,
                    const std::string& interpreter, const std::string& script_path);
+        ~CgiHandler();
         CgiProcess cgi;
         Connection* _owner;  // who to notify on completion
 

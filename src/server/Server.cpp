@@ -75,9 +75,7 @@ void Server::create_socket(const std::string& host, int port) {
     }
 }
 
-Server::~Server() {
-    close(fd);  // listening fd
-}
+Server::~Server() {}
 
 void Server::on_readable() { accept_new_connection(fd); }
 void Server::on_writable() { Log::error("This should never display"); }

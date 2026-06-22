@@ -35,15 +35,10 @@ Connection::Connection(EventLoop& event_loop, int fd,
 }
 
 Connection::~Connection() {
-    if (!cgi) return;
-    // If the client vanished mid-request the CGI may still be registered and the
-    // child still running: pull any live pipes out of the loop and make sure the
-    // child is gone before freeing the handler. All of these are no-ops once the
-    // CGI completed normally (fds are -1, pid is -1).
-    if (cgi->cgi.fd[0] != -1) event_loop.unregister_fd(cgi->cgi.fd[0]);
-    if (cgi->cgi.in_fd[1] != -1) event_loop.unregister_fd(cgi->cgi.in_fd[1]);
-    cgi->cgi.kill_child();
-    delete cgi;
+    // The CgiHandler is owned by the event loop, not by us. If one is still in
+    // flight when we're torn down (client gone mid-CGI, or shutdown), just drop
+    // its back-pointer so it won't call on_cgi_done() into freed memory;
+    if (cgi) cgi->_owner = NULL;
 }
 
 void Connection::on_tick(time_t now) {
@@ -151,17 +146,22 @@ void Connection::start_cgi(const std::string& interpreter, const std::string& fi
     cgi = new CgiHandler(event_loop, request, config, interpreter, filepath);
     cgi->_owner = this;
 
-    // fork()/pipe() failed -> answer immediately (exec_status is a 5xx).
+    // fork()/pipe() failed -> answer immediately (exec_status is a 5xx). The
+    // pipes were never registered, so the loop never took ownership: build the
+    // error response and free the handler ourselves (~CgiHandler nulls cgi).
     if (cgi->cgi.exec_status >= 400) {
         on_cgi_done(*cgi);
+        delete cgi;
+        cgi = NULL;
         return;
     }
 
-    // Poll both pipe ends: read the script's stdout, write its stdin. The client
-    // socket goes idle (events 0) until the CGI completes; CgiHandler drives the
-    // rest and calls back into on_cgi_done().
-    event_loop.register_fd(cgi->cgi.fd[0], POLLIN, cgi);
-    event_loop.register_fd(cgi->cgi.in_fd[1], POLLOUT, cgi);
+    // Poll both pipe ends: read the script's stdout, write its stdin. Hand the
+    // handler's lifetime to the loop (owned=true): once it's finished with no
+    // fds left, the loop closes the pipes and frees it. The client socket goes
+    // idle (events 0) until the CGI completes and calls back into on_cgi_done().
+    event_loop.register_fd(cgi->cgi.fd[0], POLLIN, cgi, true);
+    event_loop.register_fd(cgi->cgi.in_fd[1], POLLOUT, cgi, true);
     event_loop.set_events(fd, 0);
 }
 

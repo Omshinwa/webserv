@@ -27,9 +27,8 @@ void CgiHandler::on_writable() {
         return;
     }
     ssize_t n = write(cgi.in_fd[1], write_buffer.data(), write_buffer.size());
-    // n <= 0: pipe full (EAGAIN) or the child is gone .
-    // Either way retry next POLLOUT — EOF on the read side or the
-    // timeout below will end things if the child really died.
+    // n <= 0: pipe full (EAGAIN) or the child is gone.
+    // We can retry again next poll(), let the timeout kill it if it's really buggy
     if (n <= 0) return;
     touch();
     write_buffer.erase(0, n);
@@ -74,16 +73,25 @@ void CgiHandler::on_tick(time_t now) {
 }
 
 void CgiHandler::complete() {
-    // Stop polling our pipes (closing them) before handing back to the owner;
-    // the -1 sentinels keep ~Connection from touching them a second time.
-    if (cgi.fd[0] != -1) {
-        event_loop.unregister_fd(cgi.fd[0]);
-        cgi.fd[0] = -1;
-    }
-    if (cgi.in_fd[1] != -1) {
-        event_loop.unregister_fd(cgi.in_fd[1]);
-        cgi.in_fd[1] = -1;
-    }
+    // We're owned by the event loop. Don't unregister our own pipes here: leaving
+    // them in _pollfds keeps us reachable so the loop's reap pass closes them and
+    // deletes us. Instead just flip finished, hand the output to the Connection,
+    // and sever the two-way link both ways (the Connection switches to sending
+    // the response and must stop pointing at us; we stop pointing at it).
     finished = true;
-    if (_owner) _owner->on_cgi_done(*this);
+    if (_owner) {
+        _owner->on_cgi_done(*this);
+        _owner->cgi = NULL;
+        _owner = NULL;
+    }
+}
+
+CgiHandler::~CgiHandler() {
+    // If the Connection outlived us, drop its now-dangling pointer. Then make
+    // sure the child is gone: a normal/timeout completion already reaped it
+    // (pid == -1, no-op), but an aborted CGI (client gone / shutdown) leaves it
+    // running. The pipes are closed by the loop's unregister before we're
+    // deleted, so we don't touch the fds here.
+    if (_owner) _owner->cgi = NULL;
+    cgi.kill_child();
 }
