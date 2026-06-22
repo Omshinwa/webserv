@@ -67,18 +67,12 @@ CgiProcess::CgiProcess(const RequestParser& req, const ServerConfig& config,
     pid = fork();
     if (pid == 0) {
         child_fork();  // never returns
-    } else if (pid > 0) {
-        // Parent keeps fd[0] (reads the child's stdout) and in_fd[1] (writes the
-        // child's stdin); the matching ends belong to the child. Both kept ends
-        // are made non-blocking when the loop registers them
-        // (EventLoop::register_fd), so it can drive them without ever stalling
-        // the single thread — no read/write/waitpid loop here anymore.
-        close(fd[1]);
-        close(in_fd[0]);
-    } else {
+    }
+    // parent
+    close(fd[1]);
+    close(in_fd[0]);
+    if (pid < 0) {  // failed
         close(fd[0]);
-        close(fd[1]);
-        close(in_fd[0]);
         close(in_fd[1]);
         Log::error("CGI fork FAIL");
         Log::error(std::strerror(errno));
@@ -137,6 +131,10 @@ void CgiProcess::child_fork() {
         Log::error(std::strerror(errno));
         exit(1);
     }
+
+    // fd[1] / in_fd[0]: after dup2 these are duplicated onto stdout/stdin. The child
+    // only needs 0 and 1, so the original numbered copies are redundant and get closed
+    // for hygiene.
     close(fd[0]);
     close(fd[1]);
     close(in_fd[0]);

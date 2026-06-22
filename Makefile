@@ -13,13 +13,13 @@ SRC			=	src/main.cpp					\
 				src/utils/Utils_str.cpp			\
 				src/server/Connection.cpp		\
 				src/server/Server.cpp			\
-				src/server/signal.cpp			\
 				src/cgi/CgiHandler.cpp			\
 				src/cgi/CgiProcess.cpp			\
 				src/http/RequestParser.cpp		\
 				src/http/ResponseBuilder.cpp	\
 				src/http/ResponseBuilder_cgi.cpp\
 				src/event/EventLoop.cpp			\
+				src/event/signal.cpp			\
 
 OBJ			=	$(SRC:.cpp=.o)
 
