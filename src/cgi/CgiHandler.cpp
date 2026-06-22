@@ -4,21 +4,42 @@
 #include "../server/Connection.hpp"
 
 namespace {
-// A runaway CGI must never hang the single-threaded server. The event loop
-// calls on_tick() every poll cycle; if the script goes quiet for too long we
-// kill it and answer 504.
 const int CGI_TIMEOUT_SEC = 10;
 }  // namespace
 
-CgiHandler::CgiHandler(EventLoop& event_loop, const RequestParser& req,
+CgiHandler::CgiHandler(EventLoop& event_loop, RequestParser& req,
                        const ServerConfig& config, const std::string& interpreter,
                        const std::string& script_path)
         : IEventHandler(event_loop),
           cgi(req, config, interpreter, script_path),
-          _owner(NULL) {
-    write_buffer = req.body;  // streamed to the child's stdin, then closed (EOF)
-    read_buffer = "";
+          _owner(NULL),
+          write_buffer(req.body),
+          read_buffer("") {
     touch();
+}
+
+// Feed the request body to the child's stdin.
+// Once it's all written (or there was none) close the write end so the child sees EOF.
+void CgiHandler::on_writable() {
+    if (finished) return;
+    if (write_buffer.empty()) {
+        finish_writing();
+        return;
+    }
+    ssize_t n = write(cgi.in_fd[1], write_buffer.data(), write_buffer.size());
+    // n <= 0: pipe full (EAGAIN) or the child is gone .
+    // Either way retry next POLLOUT — EOF on the read side or the
+    // timeout below will end things if the child really died.
+    if (n <= 0) return;
+    touch();
+    write_buffer.erase(0, n);
+    if (write_buffer.empty()) finish_writing();
+}
+
+void CgiHandler::finish_writing() {
+    if (cgi.in_fd[1] == -1) return;
+    event_loop.unregister_fd(cgi.in_fd[1]);  // closes the fd -> EOF to the child
+    cgi.in_fd[1] = -1;
 }
 
 // Drain the child's stdout. read() == 0 is EOF: the script is done, so reap it,
@@ -42,24 +63,6 @@ void CgiHandler::on_readable() {
     complete();
 }
 
-// Feed the request body to the child's stdin in non-blocking chunks. Once it's
-// all written (or there was none) close the write end so the child sees EOF.
-void CgiHandler::on_writable() {
-    if (finished) return;
-    if (write_buffer.empty()) {
-        finish_writing();
-        return;
-    }
-    ssize_t n = write(cgi.in_fd[1], write_buffer.data(), write_buffer.size());
-    // n <= 0: pipe full (EAGAIN) or the child is gone (EPIPE; SIGPIPE is
-    // ignored). Either way retry next POLLOUT — EOF on the read side or the
-    // timeout below will end things if the child really died.
-    if (n <= 0) return;
-    touch();
-    write_buffer.erase(0, n);
-    if (write_buffer.empty()) finish_writing();
-}
-
 void CgiHandler::on_tick(time_t now) {
     if (finished) return;
     if (now - _last_activity > CGI_TIMEOUT_SEC) {
@@ -68,12 +71,6 @@ void CgiHandler::on_tick(time_t now) {
         cgi.exec_status = 504;
         complete();
     }
-}
-
-void CgiHandler::finish_writing() {
-    if (cgi.in_fd[1] == -1) return;
-    event_loop.unregister_fd(cgi.in_fd[1]);  // closes the fd -> EOF to the child
-    cgi.in_fd[1] = -1;
 }
 
 void CgiHandler::complete() {

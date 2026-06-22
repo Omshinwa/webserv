@@ -1,8 +1,8 @@
 
 #include <cstring>
 
-#include "../utils/Utils.hpp"
 #include "../cgi/CgiProcess.hpp"
+#include "../utils/Utils.hpp"
 #include "RequestParser.hpp"
 #include "ResponseBuilder.hpp"
 
@@ -80,10 +80,10 @@ void ResponseBuilder::parse_cgi_response(std::string raw) {
     // optionally: handle Location of the CGI
 }
 
-// Is this a CGI? if so, handle it and return true
-// otherwise return false
-bool ResponseBuilder::handle_cgi(const std::string& filepath) {
-    // CGI: does this file's extension map to a configured handler?
+// Also sets up the variables for the CGI Handler,
+// returns it to the Connection.
+bool ResponseBuilder::is_cgi_request(const std::string& filepath) {
+    // is there an interpreter?
     const std::string* interpreter = NULL;
     for (std::map<std::string, std::string>::const_iterator it = location->cgi.begin();
          it != location->cgi.end(); ++it) {

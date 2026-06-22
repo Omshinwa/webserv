@@ -22,13 +22,12 @@ class RequestParser {
         ~RequestParser();
 
         void parse();
-        inline State get_state() const { return state; };
-
         void set_config(const ServerConfig& cfg);
+
+        inline State get_state() const { return state; };
+        inline int get_status_code() const { return status_code; };
         std::string get_header(std::string s) const;
         const t_dict& get_header_ref() const { return header; }
-
-        inline int get_status_code() const { return status_code; };
 
         std::string method;
         std::string URI;
@@ -48,7 +47,6 @@ class RequestParser {
 
         size_t content_length;  // parsed content length
 
-        // A bunch of internal variables used to represent a request
         std::string& buffer;
         size_t scan_pos;  // we scan the buffer until we find \r\n\r\n
 

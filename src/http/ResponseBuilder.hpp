@@ -1,8 +1,8 @@
 #ifndef RESPONSEBUILDER_H
 #define RESPONSEBUILDER_H
 
-#include "../config/Config.hpp"
 #include "../cgi/CgiHandler.hpp"
+#include "../config/Config.hpp"
 #include "RequestParser.hpp"
 
 // Status-Line = HTTP-Version SP Status-Code SP Reason-Phrase CRLF
@@ -13,9 +13,8 @@ class ResponseBuilder {
         ~ResponseBuilder() {};
 
         std::string build();
+
         bool waiting_for_cgi;
-        // Set alongside waiting_for_cgi: which script the Connection should spawn.
-        // The fork/exec itself is driven asynchronously by CgiHandler.
         std::string cgi_interpreter;
         std::string cgi_filepath;
 
@@ -34,7 +33,7 @@ class ResponseBuilder {
         void handle_get(RequestParser& req, const ServerConfig& config);
         void handle_post(RequestParser& req, const ServerConfig& config);
         void handle_delete(RequestParser& req, const ServerConfig& config);
-        bool handle_cgi(const std::string& filepath);
+        bool is_cgi_request(const std::string& filepath);
 
         void parse_cgi_response(std::string raw);
 

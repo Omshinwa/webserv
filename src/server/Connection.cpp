@@ -148,7 +148,6 @@ void Connection::queue_response() {
 
 void Connection::start_cgi(const std::string& interpreter, const std::string& filepath,
                            const ServerConfig& config) {
-    delete cgi;
     cgi = new CgiHandler(event_loop, request, config, interpreter, filepath);
     cgi->_owner = this;
 
@@ -167,9 +166,6 @@ void Connection::start_cgi(const std::string& interpreter, const std::string& fi
 }
 
 void Connection::on_cgi_done() {
-    // Getting the CGI result counts as activity: refresh the idle timer so the
-    // connection gets a fresh window to send the response (the CGI may have used
-    // up most of the original one, and on_tick must not now reap us mid-send).
     touch();
     ResponseBuilder response(*cgi);
     _send_buf = response.build();

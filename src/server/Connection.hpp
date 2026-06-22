@@ -52,20 +52,18 @@ class Connection : public IEventHandler {
         const std::vector<ServerConfig>& _configs;
         const ServerConfig* _active;  // resolved virtual host, NULL until header parsed
 
-        // touch() / _last_activity (the idle-timeout clock) come from IEventHandler.
-
         // Pick the server block whose server_names matches the Host header,
         // falling back to the first (default) server for this socket.
         const ServerConfig& resolve_virtual_host(const std::string& host) const;
 
-        // LOG
+        /* LOG */
+
         void log_debug(std::string s);
         void log_info(std::string s);
         void log_event(std::string s);
         void log_error(std::string s);
 
         // INNACCESSIBLE
-        // we dont allow several Connection for one fd
         Connection();
         Connection(const Connection&);
         Connection& operator=(const Connection&);
