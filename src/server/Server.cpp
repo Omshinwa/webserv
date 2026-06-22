@@ -12,7 +12,7 @@
 #include <stdexcept>
 
 #include "../event/EventLoop.hpp"
-#include "../event/IEventHandler.hpp"
+#include "../event/AEventHandler.hpp"
 #include "../utils/Log.hpp"
 #include "../utils/Utils.hpp"
 #include "Connection.hpp"
@@ -22,7 +22,7 @@
 // The caller (group_by_host_port) guarantees they all share host:port, so the
 // first one defines the endpoint to bind.
 Server::Server(EventLoop& event_loop, const std::vector<ServerConfig>& configs)
-        : IEventHandler(event_loop), configs(configs) {
+        : AEventHandler(event_loop), configs(configs) {
     const ServerConfig& first = configs[0];
     create_socket(first.host, first.port);
     log_event("Server Listening to: " + first.host + ":" + utils::to_str(first.port) +

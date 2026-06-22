@@ -10,10 +10,10 @@
 
 #include "../cgi/CgiHandler.hpp"
 #include "../config/Config.hpp"
-#include "../event/IEventHandler.hpp"
+#include "../event/AEventHandler.hpp"
 #include "../http/RequestParser.hpp"
 
-class Connection : public IEventHandler {
+class Connection : public AEventHandler {
     public:
         const int fd;
         // Client IP, set by the Server right after accept(); handed to the

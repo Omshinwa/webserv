@@ -10,7 +10,7 @@ const int CGI_TIMEOUT_SEC = 10;
 CgiHandler::CgiHandler(EventLoop& event_loop, RequestParser& req,
                        const ServerConfig& config, const std::string& interpreter,
                        const std::string& script_path)
-        : IEventHandler(event_loop),
+        : AEventHandler(event_loop),
           cgi(req, config, interpreter, script_path),
           _owner(NULL),
           write_buffer(req.body),

@@ -11,20 +11,20 @@ const int POLL_TIMEOUT_MS = 3000;
 // A handler can span several fds (a CgiHandler owns two pipes), so unregister
 // every owned fd first, then delete each owned handler exactly once.
 EventLoop::~EventLoop() {
-    std::set<IEventHandler*> dead = _owned;
+    std::set<AEventHandler*> dead = _owned;
     for (size_t i = 0; i < _pollfds.size();) {
         if (_owned.count(fd_to_handler[_pollfds[i].fd]))
             unregister_fd(_pollfds[i].fd);
         else
             ++i;
     }
-    for (std::set<IEventHandler*>::iterator it = dead.begin(); it != dead.end(); ++it)
+    for (std::set<AEventHandler*>::iterator it = dead.begin(); it != dead.end(); ++it)
         delete *it;
     _owned.clear();
 }
 
 // events = POLLIN or POLLOUT;
-void EventLoop::register_fd(int fd, int events, IEventHandler* handler, bool owned) {
+void EventLoop::register_fd(int fd, int events, AEventHandler* handler, bool owned) {
     // Take ownership first: if a push_back below throws, ~EventLoop still frees it.
     if (owned) _owned.insert(handler);
     pollfd polling_req;
@@ -36,8 +36,8 @@ void EventLoop::register_fd(int fd, int events, IEventHandler* handler, bool own
     fcntl(fd, F_SETFL, O_NONBLOCK);
 }
 
-bool EventLoop::has_registered_fd(IEventHandler* h) const {
-    for (std::map<int, IEventHandler*>::const_iterator it = fd_to_handler.begin();
+bool EventLoop::has_registered_fd(AEventHandler* h) const {
+    for (std::map<int, AEventHandler*>::const_iterator it = fd_to_handler.begin();
          it != fd_to_handler.end(); ++it)
         if (it->second == h) return true;
     return false;
@@ -100,7 +100,7 @@ void EventLoop::run() {
         // the has_registered_fd() guard it.
         // Safe ONLY because no destructor unregisters fds (mutates _pollfds);
         for (size_t i = 0; i < _pollfds.size();) {
-            IEventHandler* h = fd_to_handler[_pollfds[i].fd];
+            AEventHandler* h = fd_to_handler[_pollfds[i].fd];
             if (h->finished) {
                 unregister_fd(_pollfds[i].fd);
                 if (_owned.count(h) && !has_registered_fd(h)) {
@@ -115,7 +115,7 @@ void EventLoop::run() {
 }
 
 void EventLoop::handle_event(pollfd& pfd) {
-    IEventHandler* h = fd_to_handler[pfd.fd];
+    AEventHandler* h = fd_to_handler[pfd.fd];
     int revents = pfd.revents;
     // POLLHUP = peer closed its end (e.g. a CGI child that exited)
     // POLLERR = broken pipe/socket.

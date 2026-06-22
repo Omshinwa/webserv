@@ -32,7 +32,7 @@
 //
 
 #include "event/EventLoop.hpp"
-#include "event/IEventHandler.hpp"
+#include "event/AEventHandler.hpp"
 //
 #include "cgi/CgiHandler.hpp"
 #include "cgi/CgiProcess.hpp"

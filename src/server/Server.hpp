@@ -8,11 +8,11 @@
 #include <vector>
 
 #include "../config/Config.hpp"
-#include "../event/IEventHandler.hpp"
+#include "../event/AEventHandler.hpp"
 
 class Connection;
 
-class Server : public IEventHandler {
+class Server : public AEventHandler {
     public:
         Server(EventLoop& event_loop, const std::vector<ServerConfig>& configs);
         ~Server();

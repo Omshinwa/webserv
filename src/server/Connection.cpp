@@ -20,7 +20,7 @@ const time_t CONNECTION_TIMEOUT_SEC = 10;
 // It creates the Request and Response
 Connection::Connection(EventLoop& event_loop, int fd,
                        const std::vector<ServerConfig>& configs, sockaddr_in addr)
-        : IEventHandler(event_loop),
+        : AEventHandler(event_loop),
           fd(fd),
           cgi(NULL),
           _send_offset(0),

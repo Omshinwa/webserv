@@ -1,5 +1,5 @@
-#ifndef IEVENTHANDLER_H
-#define IEVENTHANDLER_H
+#ifndef AEVENTHANDLER_H
+#define AEVENTHANDLER_H
 
 // ── standard library ────────────────────────────────────────────────────────
 #include <algorithm>
@@ -29,11 +29,11 @@
 
 class EventLoop;
 
-class IEventHandler {
+class AEventHandler {
     public:
-        IEventHandler(EventLoop& event_loop) : finished(false), event_loop(event_loop) {}
+        AEventHandler(EventLoop& event_loop) : finished(false), event_loop(event_loop) {}
 
-        virtual ~IEventHandler() {}
+        virtual ~AEventHandler() {}
         virtual void on_readable() = 0;
         virtual void on_writable() = 0;
         // should turn finished to true if enough time has passed

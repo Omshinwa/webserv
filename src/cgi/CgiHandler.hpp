@@ -14,14 +14,14 @@
 #include <map>
 #include <vector>
 
-#include "../event/IEventHandler.hpp"
+#include "../event/AEventHandler.hpp"
 #include "../utils/Log.hpp"
 #include "../utils/Utils.hpp"
 #include "CgiProcess.hpp"
 
 class Connection;
 
-class CgiHandler : public IEventHandler {
+class CgiHandler : public AEventHandler {
     public:
         CgiHandler(EventLoop& event_loop, RequestParser& req, const ServerConfig& config,
                    const std::string& interpreter, const std::string& script_path);
