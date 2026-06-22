@@ -358,18 +358,20 @@ std::string ResponseBuilder::build() {
     if (status_code >= 400) {
         std::string phrase = reason_phrase(status_code);
         std::string code = utils::to_str(status_code);
-        std::ostringstream oss;
-        oss << "<!DOCTYPE html>\r\n"
-            << "<html>\r\n"
-            << "<head><title>" << code << " " << phrase << "</title></head>\r\n"
-            << "<body>\r\n"
-            << "<center><h1>" << code << " " << phrase << "</h1></center>\r\n"
-            << "<hr><center>webserv</center>\r\n"
-            << "</body>\r\n"
-            << "</html>\r\n";
-        body = oss.str();
-        header["content-type"] = "text/html";
-        header["content-length"] = utils::to_str(body.size());
+        if (body.empty()) {
+            std::ostringstream oss;
+            oss << "<!DOCTYPE html>\r\n"
+                << "<html>\r\n"
+                << "<head><title>" << code << " " << phrase << "</title></head>\r\n"
+                << "<body>\r\n"
+                << "<center><h1>" << code << " " << phrase << "</h1></center>\r\n"
+                << "<hr><center>webserv</center>\r\n"
+                << "</body>\r\n"
+                << "</html>\r\n";
+            body = oss.str();
+            header["content-type"] = "text/html";
+            header["content-length"] = utils::to_str(body.size());
+        }
     }
 
     std::ostringstream oss;

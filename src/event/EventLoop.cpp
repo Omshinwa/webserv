@@ -75,7 +75,7 @@ void EventLoop::run() {
         if (n < 0) {
             if (webserv::g_stop)  // signal interrupted
             {
-                Log::event("SIGNAL INTERRUPT");
+                Log::error("SIGNAL INTERRUPT");
                 continue;
             }
             Log::error("poll error");
