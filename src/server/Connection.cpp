@@ -198,15 +198,15 @@ const ServerConfig& Connection::resolve_virtual_host(const std::string& host) co
 
 void Connection::log_debug(std::string s) {
     Log::color_idx = fd;
-    if (s.size() > 200) {  // only display the first 200 characters
-        Log::debug(s.substr(0, 200) + "\n...");
+    if (s.size() > 500) {  // only display the first 200 characters
+        Log::debug(s.substr(0, 500) + "\n...");
     } else
         Log::debug(s);
 }
 void Connection::log_info(std::string s) {
     Log::color_idx = fd;
-    if (s.size() > 200) {  // only display the first 200 characters
-        Log::info(s.substr(0, 200) + "\n...");
+    if (s.size() > 500) {  // only display the first 200 characters
+        Log::info(s.substr(0, 500) + "\n...");
     } else
         Log::info(s);
 }

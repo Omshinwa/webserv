@@ -142,13 +142,13 @@
                 responseText.textContent = 'Sending POST request...';
 
                 try {
-                    const response = await fetch('/api/test', {
+                    const response = await fetch('/cgi-bin/process.py', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(formData)
                     });
                     const text = await response.text();
-                    responseText.textContent = `Status ${response.status}: ${text || 'Success (No body returned)'}`;
+                    responseText.textContent = text;
                 } catch (err) {
                     responseText.textContent = `Error: ${err.message}. (Make sure your C++ server handles POST routes!)`;
                 }

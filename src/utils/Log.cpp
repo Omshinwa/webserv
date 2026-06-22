@@ -107,20 +107,27 @@ std::string Log::timestamp() {
 void Log::set_level(Level lvl) { _level = lvl; }
 
 void Log::debug(const std::string& s) {
+    if (_level > Log::DEBUG) return;
     std::cout << rgb_to_ansi(255, 240, 240) << s << nl;
 }
 
-void Log::info(const std::string& s) { std::cout << color(color_idx) << s << nl; }
+void Log::info(const std::string& s) {
+    if (_level > Log::INFO) return;
+    std::cout << color(color_idx) << s << nl;
+}
 
 void Log::event(const std::string s) {
+    if (_level > Log::EVENT) return;
     std::cout << background(color_idx) << black << "[" << timestamp() << "] " << s << nl;
 }
 
 // not used
 void Log::warning(const std::string& s) {
+    if (_level > Log::WARNING) return;
     std::cout << background(color_idx) << black << "[" << timestamp() << "] " << s << nl;
 }
 
 void Log::error(const std::string& s) {
+    if (_level > Log::ERROR) return;
     std::cerr << red << "[" << timestamp() << "] " << s << nl;
 }

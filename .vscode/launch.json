@@ -31,7 +31,7 @@
                 // info inferiors
                 // inferior 1
                 // inferior 2
-                // config to uncomment for this to work:
+                // // config to uncomment for this to work:
                 // {
                 //     "description": "Follow child after fork",
                 //     "text": "set follow-fork-mode child"

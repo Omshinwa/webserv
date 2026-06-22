@@ -5,7 +5,7 @@
 
 class Log {
     public:
-        enum Level { DEBUG = 0, INFO = 1, WARNING = 2, ERROR = 3, NONE = 4 };
+        enum Level { DEBUG = 0, INFO = 1, EVENT = 2, WARNING = 3, ERROR = 4 };
 
     private:
         static Level _level;
