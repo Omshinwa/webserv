@@ -30,12 +30,12 @@ class ResponseBuilder {
         RequestParser* req;
 
         // methods
-        void find_location(RequestParser& req, const ServerConfig& config);
-        void check_methods(RequestParser& req);
-        void handle_method(RequestParser& req, const ServerConfig& config);
-        void handle_get(RequestParser& req, const ServerConfig& config);
-        void handle_post(RequestParser& req, const ServerConfig& config);
-        void handle_delete(RequestParser& req, const ServerConfig& config);
+        void find_location();
+        void check_methods();
+        void handle_method();
+        void handle_get();
+        void handle_post();
+        void handle_delete();
         bool is_cgi_request(const std::string& filepath);
 
         void parse_cgi_response(std::string raw);

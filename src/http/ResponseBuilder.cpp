@@ -141,12 +141,12 @@ std::string capitalize_header(std::string s) {
 }  // namespace
 
 // find the matching location config
-void ResponseBuilder::find_location(RequestParser& req, const ServerConfig& config) {
+void ResponseBuilder::find_location() {
     const LocationConfig* best = NULL;
     for (std::vector<LocationConfig>::const_iterator it = config.locations.begin();
          it != config.locations.end(); ++it) {
         // we need to find the location with the longest matching path
-        if (path_matches(req.URI, it->path)) {
+        if (path_matches(req->URI, it->path)) {
             if (best == NULL || it->path.size() > best->path.size()) best = &*it;
         }
     }
@@ -157,17 +157,17 @@ void ResponseBuilder::find_location(RequestParser& req, const ServerConfig& conf
     location = best;
 }
 
-void ResponseBuilder::check_methods(RequestParser& req) {
+void ResponseBuilder::check_methods() {
     // find the matching method:
     std::vector<std::string>::const_iterator it;
     for (it = location->methods.begin(); it != location->methods.end(); ++it) {
-        if (req.method == *it) break;
+        if (req->method == *it) break;
     }
     // couldnt find the method
     if (it == location->methods.end()) status_code = 405;
 }
 
-void ResponseBuilder::handle_get(RequestParser& req, const ServerConfig& config) {
+void ResponseBuilder::handle_get() {
     // check for `return`
     if (location->redirect_code != 0) {
         status_code = location->redirect_code;
@@ -176,7 +176,7 @@ void ResponseBuilder::handle_get(RequestParser& req, const ServerConfig& config)
     }
     // check for root + URI request
     const std::string& root = location->has_root ? location->root : config.root;
-    std::string filepath = utils::join_path(root, req.URI);
+    std::string filepath = utils::join_path(root, this->req->URI);
 
     if (!utils::file_exists(filepath)) {
         status_code = 404;
@@ -195,7 +195,7 @@ void ResponseBuilder::handle_get(RequestParser& req, const ServerConfig& config)
             bool autoindex =
                     location->has_autoindex ? location->autoindex : config.autoindex;
             if (autoindex) {
-                body = build_autoindex(filepath, req.URI);
+                body = build_autoindex(filepath, this->req->URI);
                 header["content-type"] = "text/html";
                 header["content-length"] = utils::to_str(body.size());
                 Log::event("Generated autoindex for `" + filepath + "`");
@@ -231,18 +231,18 @@ void ResponseBuilder::handle_get(RequestParser& req, const ServerConfig& config)
     }
 }
 
-void ResponseBuilder::handle_post(RequestParser& req, const ServerConfig& config) {
+void ResponseBuilder::handle_post() {
     const std::string& root = location->has_root ? location->root : config.root;
 
     // POST to an existing CGI script runs it (the body is piped to the script's
     // stdin) rather than treating the request as a file upload.
-    std::string script_path = utils::join_path(root, req.URI);
+    std::string script_path = utils::join_path(root, this->req->URI);
     if (utils::is_regular_file(script_path) && is_cgi_request(script_path)) return;
 
     std::string upload_path;
 
     if (location->has_upload) {
-        std::string filename = req.URI;
+        std::string filename = this->req->URI;
         size_t slash = filename.rfind('/');
         if (slash != std::string::npos) filename = filename.substr(slash + 1);
         if (filename.empty()) {
@@ -269,7 +269,7 @@ void ResponseBuilder::handle_post(RequestParser& req, const ServerConfig& config
 
     bool existed = utils::file_exists(upload_path);
 
-    if (!utils::write_file(upload_path, req.body)) {
+    if (!utils::write_file(upload_path, this->req->body)) {
         status_code = 500;
         Log::error(std::strerror(errno));
         return;
@@ -279,15 +279,15 @@ void ResponseBuilder::handle_post(RequestParser& req, const ServerConfig& config
         status_code = 204;
     } else {
         status_code = 201;
-        header["location"] = req.URI;
+        header["location"] = this->req->URI;
     }
-    Log::event("POST: wrote " + utils::to_str(req.body.size()) + " bytes to `" +
+    Log::event("POST: wrote " + utils::to_str(this->req->body.size()) + " bytes to `" +
                upload_path + "`");
 }
 
-void ResponseBuilder::handle_delete(RequestParser& req, const ServerConfig& config) {
+void ResponseBuilder::handle_delete() {
     const std::string& root = location->has_root ? location->root : config.root;
-    std::string filepath = utils::join_path(root, req.URI);
+    std::string filepath = utils::join_path(root, this->req->URI);
 
     if (!utils::file_exists(filepath)) {
         status_code = 404;
@@ -324,13 +324,13 @@ void ResponseBuilder::handle_delete(RequestParser& req, const ServerConfig& conf
     Log::event("DELETE: removed `" + filepath + "`");
 }
 
-void ResponseBuilder::handle_method(RequestParser& req, const ServerConfig& config) {
-    if (req.method == "GET")
-        handle_get(req, config);
-    else if (req.method == "POST")
-        handle_post(req, config);
-    else if (req.method == "DELETE")
-        handle_delete(req, config);
+void ResponseBuilder::handle_method() {
+    if (this->req->method == "GET")
+        handle_get();
+    else if (this->req->method == "POST")
+        handle_post();
+    else if (this->req->method == "DELETE")
+        handle_delete();
     // 501 if a method you don't implement at all slipped past check_methods
     else
         status_code = 501;
@@ -352,11 +352,11 @@ ResponseBuilder::ResponseBuilder(RequestParser& req, const ServerConfig& config)
     } else
         status_code = 200;
 
-    find_location(req, config);
+    find_location();
     if (status_code >= 400) return;
-    check_methods(req);
+    check_methods();
     if (status_code >= 400) return;
-    handle_method(req, config);  // GET / POST / DELETE dispatch
+    handle_method();  // GET / POST / DELETE dispatch
 }
 
 // build the HTTP message
@@ -369,9 +369,15 @@ std::string ResponseBuilder::build() {
                     config.error_pages.find(status_code);
             if (it != config.error_pages.end()) {
                 req->URI = it->second;
-                int old_status = status_code;
-                handle_get(*req, config);
-                status_code = old_status;
+                req->method = "GET";
+                ResponseBuilder error_res(*req, config);
+                if (error_res.status_code == 200 || error_res.status_code >= 400)
+                    error_res.status_code = status_code;  //   keep the old code
+                else {
+                    // else 3xx: handle_get hit a `return`  -> leave it -> client sees 301
+                }
+                error_res.req = NULL;  // prevent infinite loop
+                return error_res.build();
             }
         }
         // 2. fallback: generated default page

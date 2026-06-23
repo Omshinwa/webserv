@@ -32,7 +32,8 @@ ResponseBuilder::ResponseBuilder(CgiHandler& handler)
         : waiting_for_cgi(false),
           protocol("HTTP/1.0"),
           location(NULL),
-          config(handler.cgi.config) {
+          config(handler.cgi.config),
+          req(NULL) {  // CGI path: no request to re-route, so error_pages are skipped
     header["connection"] = "close";
     // fork/pipe failed, the script crashed (502), or it timed out (504):
     // build() turns the >= 400 status into an error page.
