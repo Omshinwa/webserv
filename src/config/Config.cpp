@@ -140,6 +140,11 @@ class Parser {
                 if (name == "methods" || name == "allow_methods" ||
                     name == "limit_except") {
                     if (args.empty()) fail("'methods' expects at least one method");
+                    for (size_t i = 0; i < args.size(); ++i) {
+                        std::string m = args[i];
+                        if (m != "GET" && m != "POST" && m != "DELETE")
+                            fail("invalid method '" + m + "'");
+                    }
                     loc.methods = args;
                     loc.has_methods = true;
                 } else if (name == "root") {
