@@ -31,8 +31,8 @@
 #include "config/Config.hpp"
 //
 
-#include "event/EventLoop.hpp"
 #include "event/AEventHandler.hpp"
+#include "event/EventLoop.hpp"
 //
 #include "cgi/CgiHandler.hpp"
 #include "cgi/CgiProcess.hpp"
@@ -51,11 +51,6 @@ int main(int ac, char** av) {
         std::string path = (ac == 2) ? av[1] : "configs/default.conf";
         std::vector<ServerConfig> configs = Config::parse(path);
 
-        // One listening socket per unique host:port. `groups` must outlive the
-        // Servers: each Server keeps a reference into it for virtual-host lookup.
-        // The Servers are owned by the loop (registered with owned=true) and freed
-        // in ~EventLoop. event_loop is declared *after* groups, so it is destroyed
-        // first — the Servers die before the groups they reference. Keep that order.
         std::map<std::string, std::vector<ServerConfig> > groups =
                 Config::group_by_host_port(configs);
         EventLoop event_loop;
