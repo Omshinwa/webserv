@@ -23,8 +23,11 @@ class ResponseBuilder {
         int status_code;
         t_dict header;
         std::string body;
-
         const LocationConfig* location;
+        const ServerConfig& config;
+        // the request can be modified (we modify its URI for redirection like
+        // error_pages)
+        RequestParser* req;
 
         // methods
         void find_location(RequestParser& req, const ServerConfig& config);

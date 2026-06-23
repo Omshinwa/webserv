@@ -54,6 +54,17 @@ void RequestParser::parse_start_line(std::string line) {
     method = items[0];
     URI = items[1];
     protocol = items[2];
+
+    // Split the request target into path + query string. Everything after the
+    // first '?' is the query (handed to CGI as QUERY_STRING); file resolution
+    // uses the path only, so "/cgi-bin/up.py?name=x" maps to the file
+    // "/cgi-bin/up.py" the same way "/index.html?source=google" maps to
+    // "/index.html".
+    size_t qpos = URI.find('?');
+    if (qpos != std::string::npos) {
+        query_string = URI.substr(qpos + 1);
+        URI = URI.substr(0, qpos);
+    }
 }
 
 // parse a single line

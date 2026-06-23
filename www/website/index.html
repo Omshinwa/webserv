@@ -68,6 +68,21 @@
             <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 space-y-4 md:col-span-2">
                 <h2 class="text-xl font-bold text-teal-400 flex items-center gap-2">
                     <span class="bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded text-xs font-mono">POST</span>
+                    <span class="bg-purple-500/10 text-purple-400 px-2 py-0.5 rounded text-xs font-mono">CGI</span>
+                    Upload through CGI (uppercase)
+                </h2>
+                <p class="text-slate-300 text-sm">POST a text file's contents to a Python CGI script. It uppercases the
+                    body and saves it to <code class="text-teal-300">uploads/</code> — the filename is passed via the
+                    query string (<span class="font-mono">?name=…</span> → <span class="font-mono">QUERY_STRING</span>).</p>
+                <a href="/upload-cgi.html"
+                    class="inline-block bg-teal-600 hover:bg-teal-500 text-white px-4 py-2 rounded text-sm transition font-medium">
+                    Open CGI Upload →
+                </a>
+            </div>
+
+            <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 space-y-4 md:col-span-2">
+                <h2 class="text-xl font-bold text-teal-400 flex items-center gap-2">
+                    <span class="bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded text-xs font-mono">POST</span>
                     Data Submission & CGI Testing
                 </h2>
                 <p class="text-slate-300 text-sm">Submit this form to test how your server processes body payloads or

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CGI Upload — Uppercase</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+
+<body class="bg-slate-900 text-slate-100 min-h-screen antialiased">
+
+    <div class="max-w-3xl mx-auto p-6 space-y-8">
+        <header class="border-b border-slate-800 pb-6 flex justify-between items-center">
+            <div>
+                <h1
+                    class="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-teal-400 to-blue-500 bg-clip-text text-transparent">
+                    CGI Upload — Uppercase
+                </h1>
+                <p class="text-slate-400 mt-1 text-sm">POST a text file's contents → CGI uppercases it → saves to
+                    <code class="text-teal-300">uploads/</code></p>
+            </div>
+            <a href="/"
+                class="bg-slate-800 hover:bg-slate-700 border border-slate-700 px-4 py-2 rounded-lg text-sm font-semibold transition">
+                ← Home
+            </a>
+        </header>
+
+        <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 space-y-5">
+            <p class="text-slate-300 text-sm">
+                The request body is the file content. The save name is sent in the
+                <span class="text-teal-300 font-mono">query string</span>, which the server hands to the script as
+                <span class="text-teal-300 font-mono">QUERY_STRING</span>:
+                <span class="text-slate-400 font-mono">POST /cgi-bin/uppercase.py?name=&lt;file&gt;</span>
+            </p>
+
+            <form id="upload-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                        Pick a text file (optional — loads it into the box below)
+                    </label>
+                    <input id="file-input" type="file" accept=".txt,text/plain"
+                        class="block w-full text-sm text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-teal-600 file:text-white file:font-semibold hover:file:bg-teal-500 file:cursor-pointer" />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                        Content to upload
+                    </label>
+                    <textarea id="content" rows="8" required
+                        class="w-full bg-slate-900 border border-slate-700 rounded p-3 font-mono text-sm focus:outline-none focus:border-teal-400 text-slate-200"
+                        placeholder="Type some text, or pick a .txt file above..."></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                        Save as (filename in uploads/)
+                    </label>
+                    <input id="save-as" type="text" value="uppercased.txt" required
+                        class="w-full bg-slate-900 border border-slate-700 rounded p-2 font-mono text-sm focus:outline-none focus:border-teal-400 text-slate-200"
+                        placeholder="notes.txt" />
+                </div>
+
+                <button type="submit"
+                    class="bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold px-5 py-2 rounded text-sm transition cursor-pointer">
+                    Upload via CGI
+                </button>
+            </form>
+
+            <div id="response-box"
+                class="hidden mt-4 p-4 bg-slate-900 rounded border border-slate-700 font-mono text-xs space-y-1">
+                <div class="text-slate-500">// CGI Response (HTTP <span id="response-status"></span>):</div>
+                <div id="response-text" class="text-emerald-400 whitespace-pre-wrap"></div>
+            </div>
+
+            <p class="text-slate-500 text-xs">
+                After uploading, browse <a href="/uploads/" class="text-teal-400 underline">/uploads/</a> to see the
+                saved file (autoindex).
+            </p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('upload-form');
+            const fileInput = document.getElementById('file-input');
+            const content = document.getElementById('content');
+            const saveAs = document.getElementById('save-as');
+            const box = document.getElementById('response-box');
+            const status = document.getElementById('response-status');
+            const text = document.getElementById('response-text');
+
+            // Load a chosen .txt into the textarea and prefill the save name.
+            fileInput.addEventListener('change', () => {
+                const file = fileInput.files[0];
+                if (!file) return;
+                saveAs.value = file.name;
+                const reader = new FileReader();
+                reader.onload = () => { content.value = reader.result; };
+                reader.readAsText(file);
+            });
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                box.classList.remove('hidden');
+                status.textContent = '...';
+                text.textContent = 'Uploading...';
+
+                const name = encodeURIComponent(saveAs.value.trim() || 'uppercased.txt');
+                try {
+                    const res = await fetch('/cgi-bin/uppercase.py?name=' + name, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: content.value
+                    });
+                    status.textContent = res.status;
+                    text.textContent = await res.text();
+                } catch (err) {
+                    status.textContent = 'ERR';
+                    text.textContent = 'Error: ' + err.message;
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

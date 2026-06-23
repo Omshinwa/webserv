@@ -8,8 +8,7 @@
 
 # Maybe
 <!-- * handle all the vars of CGI -->
-* 1.1 HTTP? chunked 
-* tighter parsing (only accept GET POST DELETE as request, only accept on/off as values for autoindex etc)
+* 1.1 HTTP? chunked
 * Prettier logger (add the timestamp), make debug() info() more consistent
 * draw a schema of the whole control flow
 

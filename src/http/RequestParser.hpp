@@ -30,7 +30,8 @@ class RequestParser {
         const t_dict& get_header_ref() const { return header; }
 
         std::string method;
-        std::string URI;
+        std::string URI;           // path only, query stripped (e.g. "/cgi-bin/up.py")
+        std::string query_string;  // everything after '?', empty if none
         std::string protocol;
         std::string body;
         std::string remote_addr;  // client IP, filled in by the Connection

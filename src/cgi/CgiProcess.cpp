@@ -157,10 +157,7 @@ void CgiProcess::child_execve() {
             strings.push_back("CONTENT_LENGTH=" + req.get_header("content-length"));
             strings.push_back("CONTENT_TYPE=" + req.get_header("content-type"));
         }
-        if (req.URI.find("?") != std::string::npos)
-            strings.push_back("QUERY_STRING=" + utils::split(req.URI, "?")[1]);
-        else
-            strings.push_back("QUERY_STRING=");
+        strings.push_back("QUERY_STRING=" + req.query_string);
         strings.push_back("SERVER_PROTOCOL=HTTP/1.0");
         strings.push_back("GATEWAY_INTERFACE=CGI/1.1");
         strings.push_back("SCRIPT_NAME=");  // 42 tester bug

@@ -14,7 +14,7 @@ struct LocationConfig {
         int redirect_code;
         std::string redirect_url;
         std::string upload_dir;
-        std::map<std::string, std::string> cgi;  // extension -> interpreter
+        std::map<std::string, std::string> cgi;  // cgi extension [interpreter]
 
         bool has_root;
         bool has_index;

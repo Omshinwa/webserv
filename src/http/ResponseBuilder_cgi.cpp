@@ -29,7 +29,10 @@ bool parse_http_header_line(const std::string& line, std::string& key,
 
 // Construct the response from a finished CGI handler.
 ResponseBuilder::ResponseBuilder(CgiHandler& handler)
-        : waiting_for_cgi(false), protocol("HTTP/1.0"), location(NULL) {
+        : waiting_for_cgi(false),
+          protocol("HTTP/1.0"),
+          location(NULL),
+          config(handler.cgi.config) {
     header["connection"] = "close";
     // fork/pipe failed, the script crashed (502), or it timed out (504):
     // build() turns the >= 400 status into an error page.

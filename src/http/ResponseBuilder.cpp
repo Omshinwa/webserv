@@ -10,6 +10,7 @@
 
 #include "../utils/Log.hpp"
 #include "../utils/Utils.hpp"
+#include "RequestParser.hpp"
 
 namespace {
 std::string reason_phrase(int status_code) {
@@ -337,7 +338,11 @@ void ResponseBuilder::handle_method(RequestParser& req, const ServerConfig& conf
 
 // constructor from request and config
 ResponseBuilder::ResponseBuilder(RequestParser& req, const ServerConfig& config)
-        : waiting_for_cgi(false), protocol("HTTP/1.0"), location(NULL) {
+        : waiting_for_cgi(false),
+          protocol("HTTP/1.0"),
+          location(NULL),
+          config(config),
+          req(&req) {
     header["connection"] = "close";
 
     if (req.get_status_code() != 0)  // theres an error
@@ -356,10 +361,23 @@ ResponseBuilder::ResponseBuilder(RequestParser& req, const ServerConfig& config)
 
 // build the HTTP message
 std::string ResponseBuilder::build() {
-    if (status_code >= 400) {
-        std::string phrase = reason_phrase(status_code);
-        std::string code = utils::to_str(status_code);
+    if (status_code >= 400 && body.empty()) {
+        // 1. custom error_page from config, if any
+        if (req != NULL)  // we built the Response from a request, not CGI
+        {
+            std::map<int, std::string>::const_iterator it =
+                    config.error_pages.find(status_code);
+            if (it != config.error_pages.end()) {
+                req->URI = it->second;
+                int old_status = status_code;
+                handle_get(*req, config);
+                status_code = old_status;
+            }
+        }
+        // 2. fallback: generated default page
         if (body.empty()) {
+            std::string phrase = reason_phrase(status_code);
+            std::string code = utils::to_str(status_code);
             std::ostringstream oss;
             oss << "<!DOCTYPE html>\r\n"
                 << "<html>\r\n"
