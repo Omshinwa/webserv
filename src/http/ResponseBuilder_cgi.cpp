@@ -64,7 +64,12 @@ void ResponseBuilder::parse_cgi_response(std::string raw) {
 
     for (size_t i = 0; i < lines.size(); ++i) {
         std::string k, v;
-        if (parse_http_header_line(lines[i], k, v)) header[k] = v;
+        if (parse_http_header_line(lines[i], k, v)) {
+            if (k == "set-cookie")
+                set_cookies.push_back(v);  // keep every cookie, not just the last
+            else
+                header[k] = v;
+        }
     }
 
     // 3. body is just the rest

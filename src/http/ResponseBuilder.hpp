@@ -1,6 +1,8 @@
 #ifndef RESPONSEBUILDER_H
 #define RESPONSEBUILDER_H
 
+#include <vector>
+
 #include "../cgi/CgiHandler.hpp"
 #include "../config/Config.hpp"
 #include "RequestParser.hpp"
@@ -22,6 +24,9 @@ class ResponseBuilder {
         std::string protocol;
         int status_code;
         t_dict header;
+        // Set-Cookie is the one header that legitimately repeats, so it can't
+        // live in the single-value header map; each cookie gets its own line.
+        std::vector<std::string> set_cookies;
         std::string body;
         const LocationConfig* location;
         const ServerConfig& config;

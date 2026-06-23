@@ -404,6 +404,8 @@ std::string ResponseBuilder::build() {
     for (t_dict::const_iterator it = header.begin(); it != header.end(); ++it) {
         oss << capitalize_header(it->first) << ": " << it->second << "\r\n";
     }
+    for (size_t i = 0; i < set_cookies.size(); ++i)  // each cookie on its own line
+        oss << "Set-Cookie: " << set_cookies[i] << "\r\n";
     oss << "\r\n";
     oss << body;
     return oss.str();
