@@ -250,14 +250,15 @@ void ResponseBuilder::handle_post(RequestParser& req, const ServerConfig& config
         }
         upload_path = utils::join_path(location->upload_dir, filename);
     } else {
-        upload_path = utils::join_path(root, req.URI);
+        status_code = 403;
+        return;
     }
 
     std::string dir = upload_path.substr(0, upload_path.rfind('/'));
     if (dir.empty()) dir = "/";
 
     if (!utils::file_exists(dir) || !utils::is_directory(dir)) {
-        status_code = 404;
+        status_code = 403;
         return;
     }
     if (!utils::is_writable(dir)) {
