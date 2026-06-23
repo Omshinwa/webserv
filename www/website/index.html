@@ -142,7 +142,7 @@
                 responseText.textContent = 'Sending POST request...';
 
                 try {
-                    const response = await fetch('/cgi-bin/process.py', {
+                    const response = await fetch('/cgi-bin/translate.py', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(formData)

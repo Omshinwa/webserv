@@ -6,6 +6,8 @@ import json
 import urllib.parse
 import urllib.request
 
+# google public api, example:
+# https://translate.googleapis.com/translate_a/single?client=gtx&sl=fr&tl=en&dt=t&q=MESSAGE+A+TRADUIRE
 
 def translate(text, src="fr", dst="en"):
     """Translate via Google's free (unofficial) web endpoint. No API key needed."""
