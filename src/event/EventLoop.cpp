@@ -6,6 +6,8 @@ namespace {
 const int POLL_TIMEOUT_MS = 3000;
 }  // namespace
 
+EventLoop::EventLoop() {}
+
 // Close and free every handler the loop owns (in-flight Connections and the
 // listening Servers), which also tears down any CGI pipes and reaps children.
 // A handler can span several fds (a CgiHandler owns two pipes), so unregister

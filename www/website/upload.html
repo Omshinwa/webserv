@@ -1,240 +1,246 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>wsgit — Gestion des fichiers</title>
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: system-ui, sans-serif;
-    background: #0f172a;
-    color: #e2e8f0;
-    max-width: 680px;
-    margin: 40px auto;
-    padding: 0 20px;
-  }
-  h1 {
-    background: linear-gradient(90deg, #2dd4bf, #3b82f6);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    font-size: 1.6rem;
-    margin-bottom: 24px;
-  }
-  h2 { font-size: 1rem; color: #94a3b8; margin-bottom: 12px; }
-  .card {
-    background: #1e293b;
-    border: 1px solid #334155;
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 18px;
-  }
-  input[type=file] { color: #cbd5e1; margin: 10px 0; width: 100%; }
-  .btn {
-    background: #3b82f6;
-    color: #fff;
-    border: 0;
-    border-radius: 8px;
-    padding: 9px 16px;
-    cursor: pointer;
-    font-size: 14px;
-  }
-  .btn:hover { background: #2563eb; }
-  .btn-del {
-    background: transparent;
-    color: #f87171;
-    border: 1px solid #f87171;
-    border-radius: 6px;
-    padding: 4px 10px;
-    cursor: pointer;
-    font-size: 13px;
-  }
-  .btn-del:hover { background: #7f1d1d; border-color: #ef4444; }
-  .btn-sm {
-    font-size: 13px;
-    padding: 6px 12px;
-    background: #334155;
-  }
-  .btn-sm:hover { background: #475569; }
-
-  /* toast */
-  #toast {
-    font-size: 13px;
-    font-family: ui-monospace, monospace;
-    padding: 10px 14px;
-    border-radius: 8px;
-    min-height: 36px;
-    margin-top: 10px;
-    background: #0b1220;
-    display: none;
-  }
-  #toast.ok  { display: block; color: #4ade80; }
-  #toast.err { display: block; color: #f87171; }
-
-  /* file list */
-  #file-list { list-style: none; }
-  #file-list li {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 0;
-    border-bottom: 1px solid #1e293b;
-    gap: 10px;
-  }
-  #file-list li:last-child { border-bottom: none; }
-  .filename {
-    font-family: ui-monospace, monospace;
-    font-size: 14px;
-    color: #7dd3fc;
-    flex: 1;
-    word-break: break-all;
-  }
-  .filename a { color: inherit; text-decoration: none; }
-  .filename a:hover { text-decoration: underline; }
-  #empty-msg { color: #475569; font-style: italic; font-size: 14px; padding: 8px 0; }
-  .list-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload &amp; Transform</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 </head>
-<body>
 
-<nav style="margin-bottom:20px">
-  <a href="/" style="color:#94a3b8;text-decoration:none;font-size:14px">← Accueil</a>
-</nav>
-<h1>42 Webserv — Fichiers</h1>
+<body class="bg-slate-900 text-slate-100 min-h-screen antialiased">
 
-<!-- Upload -->
-<div class="card">
-  <h2>Uploader un fichier</h2>
-  <input type="file" id="file-input">
-  <button class="btn" id="btn-upload">Envoyer</button>
-  <div id="toast"></div>
-</div>
+    <div class="max-w-3xl mx-auto p-6 space-y-8">
+        <header class="border-b border-slate-800 pb-6 flex justify-between items-center">
+            <div>
+                <h1
+                    class="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-teal-400 to-blue-500 bg-clip-text text-transparent">
+                    Upload &amp; Transform
+                </h1>
+                <p class="text-slate-400 mt-1 text-sm">Upload a text file, optionally uppercased and/or translated to
+                    English via CGI, into <code class="text-teal-300">uploads/</code></p>
+            </div>
+            <a href="/"
+                class="bg-slate-800 hover:bg-slate-700 border border-slate-700 px-4 py-2 rounded-lg text-sm font-semibold transition">
+                ← Home
+            </a>
+        </header>
 
-<!-- File list -->
-<div class="card">
-  <div class="list-header">
-    <h2>Fichiers uploadés</h2>
-    <button class="btn btn-sm" id="btn-refresh">↻ Actualiser</button>
-  </div>
-  <ul id="file-list"></ul>
-  <p id="empty-msg" style="display:none">Aucun fichier.</p>
-</div>
+        <!-- Upload form -->
+        <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 space-y-5">
+            <p class="text-slate-300 text-sm">
+                Tick a transform to route the body through the CGI
+                (<span class="text-slate-400 font-mono">POST /cgi-bin/transform.py?name=&lt;file&gt;&amp;…</span>).
+                With nothing ticked the body is uploaded straight to
+                <span class="text-slate-400 font-mono">/uploads/&lt;file&gt;</span> — no CGI.
+            </p>
 
-<script>
-(function () {
-  var UPLOAD_PATH = '/uploads';
+            <form id="upload-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                        Pick a text file (optional — loads it into the box below)
+                    </label>
+                    <input id="file-input" type="file" accept=".txt,text/plain"
+                        class="block w-full text-sm text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-teal-600 file:text-white file:font-semibold hover:file:bg-teal-500 file:cursor-pointer" />
+                </div>
 
-  function toast(msg, cls) {
-    var el = document.getElementById('toast');
-    el.textContent = msg;
-    el.className = cls;
-  }
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                        Content to upload
+                    </label>
+                    <textarea id="content" rows="8" required
+                        class="w-full bg-slate-900 border border-slate-700 rounded p-3 font-mono text-sm focus:outline-none focus:border-teal-400 text-slate-200"
+                        placeholder="Type some text, or pick a .txt file above..."></textarea>
+                </div>
 
-  // ── list files ──────────────────────────────────────────────────────────
-  function renderList(files) {
-    var ul = document.getElementById('file-list');
-    var empty = document.getElementById('empty-msg');
-    ul.innerHTML = '';
-    if (files.length === 0) {
-      empty.style.display = '';
-      return;
-    }
-    empty.style.display = 'none';
-    files.forEach(function (name) {
-      var li = document.createElement('li');
-      var span = document.createElement('span');
-      span.className = 'filename';
-      var a = document.createElement('a');
-      a.href = UPLOAD_PATH + '/' + encodeURIComponent(name);
-      a.target = '_blank';
-      a.textContent = name;
-      span.appendChild(a);
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                        Save as (used only when you type the content yourself)
+                    </label>
+                    <input id="save-as" type="text" value="upload.txt"
+                        class="w-full bg-slate-900 border border-slate-700 rounded p-2 font-mono text-sm focus:outline-none focus:border-teal-400 text-slate-200 disabled:opacity-50"
+                        placeholder="notes.txt" />
+                    <p class="text-slate-500 text-xs mt-1">When you pick a file above, its own name is used and this
+                        field is ignored.</p>
+                </div>
 
-      var btn = document.createElement('button');
-      btn.className = 'btn-del';
-      btn.textContent = 'Supprimer';
-      btn.onclick = function () { deleteFile(name); };
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                        Transform (optional)
+                    </label>
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2 text-sm text-slate-200 cursor-pointer w-fit">
+                            <input id="opt-uppercase" type="checkbox" class="accent-teal-500 w-4 h-4">
+                            Uppercase it
+                        </label>
+                        <label class="flex items-center gap-2 text-sm text-slate-200 cursor-pointer w-fit">
+                            <input id="opt-translate" type="checkbox" class="accent-teal-500 w-4 h-4">
+                            Translate from French to English
+                        </label>
+                    </div>
+                    <p class="text-slate-500 text-xs mt-2">Tick one or both to use the CGI; leave both unticked to
+                        upload directly.</p>
+                </div>
 
-      li.appendChild(span);
-      li.appendChild(btn);
-      ul.appendChild(li);
-    });
-  }
+                <button type="submit"
+                    class="bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold px-5 py-2 rounded text-sm transition cursor-pointer">
+                    Upload
+                </button>
+            </form>
 
-  function fetchFileList() {
-    fetch(UPLOAD_PATH + '/')
-      .then(function (r) { return r.text(); })
-      .then(function (html) {
-        var parser = new DOMParser();
-        var doc = parser.parseFromString(html, 'text/html');
-        var links = doc.querySelectorAll('a');
-        var files = [];
-        for (var i = 0; i < links.length; i++) {
-          var name = links[i].textContent.trim();
-          // skip parent directory link
-          if (name === '..' || name === '') continue;
-          // strip trailing slash (directories) – only keep files
-          if (name[name.length - 1] !== '/') files.push(name);
-        }
-        renderList(files);
-      })
-      .catch(function () { renderList([]); });
-  }
+            <div id="response-box"
+                class="hidden mt-4 p-4 bg-slate-900 rounded border border-slate-700 font-mono text-xs space-y-1">
+                <div class="text-slate-500">// Response (HTTP <span id="response-status"></span>):</div>
+                <div id="response-text" class="text-emerald-400 whitespace-pre-wrap"></div>
+            </div>
+        </div>
 
-  // ── delete ───────────────────────────────────────────────────────────────
-  function deleteFile(name) {
-    fetch(UPLOAD_PATH + '/' + encodeURIComponent(name), { method: 'DELETE' })
-      .then(function (r) {
-        if (r.status === 204) {
-          toast('Fichier "' + name + '" supprimé.', 'ok');
-        } else {
-          toast('Erreur ' + r.status + ' lors de la suppression.', 'err');
-        }
-        fetchFileList();
-      })
-      .catch(function (e) {
-        toast('Erreur réseau : ' + e.message, 'err');
-      });
-  }
+        <!-- File list -->
+        <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 space-y-4">
+            <div class="flex items-center justify-between">
+                <h2 class="text-lg font-bold text-teal-400">Uploaded files</h2>
+                <button id="btn-refresh"
+                    class="bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded text-sm transition cursor-pointer">↻
+                    Refresh</button>
+            </div>
+            <ul id="file-list" class="divide-y divide-slate-700"></ul>
+            <p id="empty-msg" class="text-slate-500 italic text-sm hidden">No files yet.</p>
+            <div id="list-msg" class="hidden font-mono text-xs"></div>
+        </div>
+    </div>
 
-  // ── upload ───────────────────────────────────────────────────────────────
-  document.getElementById('btn-upload').addEventListener('click', function () {
-    var input = document.getElementById('file-input');
-    var f = input.files[0];
-    if (!f) { toast('Aucun fichier sélectionné.', 'err'); return; }
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const UPLOAD_PATH = '/uploads';
 
-    toast('Upload de "' + f.name + '" (' + f.size + ' octets)…', 'ok');
+            const form = document.getElementById('upload-form');
+            const fileInput = document.getElementById('file-input');
+            const content = document.getElementById('content');
+            const saveAs = document.getElementById('save-as');
+            const optUpper = document.getElementById('opt-uppercase');
+            const optTranslate = document.getElementById('opt-translate');
+            const box = document.getElementById('response-box');
+            const statusEl = document.getElementById('response-status');
+            const text = document.getElementById('response-text');
 
-    fetch(UPLOAD_PATH + '/' + encodeURIComponent(f.name), {
-      method: 'POST',
-      headers: { 'Content-Type': f.type || 'application/octet-stream' },
-      body: f
-    })
-    .then(function (r) {
-      if (r.status === 201 || r.status === 204) {
-        toast('"' + f.name + '" uploadé avec succès (HTTP ' + r.status + ').', 'ok');
-        input.value = '';
-        fetchFileList();
-      } else {
-        toast('Erreur serveur : HTTP ' + r.status, 'err');
-      }
-    })
-    .catch(function (e) {
-      toast('Erreur réseau : ' + e.message, 'err');
-    });
-  });
+            // ── pick a file: load it into the textarea; its own name becomes the
+            //    save name, so the "Save as" field is disabled while a file is chosen.
+            fileInput.addEventListener('change', () => {
+                const file = fileInput.files[0];
+                if (!file) { saveAs.disabled = false; return; }
+                const reader = new FileReader();
+                reader.onload = () => { content.value = reader.result; };
+                reader.readAsText(file);
+                saveAs.value = file.name;
+                saveAs.disabled = true;
+            });
 
-  document.getElementById('btn-refresh').addEventListener('click', fetchFileList);
+            // ── submit: no transform -> direct POST to /uploads/; otherwise CGI.
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                box.classList.remove('hidden');
+                statusEl.textContent = '...';
+                text.textContent = 'Uploading...';
 
-  // load on startup
-  fetchFileList();
-})();
-</script>
+                // Name: the picked file's name, or the "Save as" field for typed content.
+                const picked = fileInput.files[0];
+                const name = picked ? picked.name : (saveAs.value.trim() || 'upload.txt');
+                const body = content.value;
+                const doUpper = optUpper.checked;
+                const doTranslate = optTranslate.checked;
+
+                let url;
+                if (!doUpper && !doTranslate) {
+                    url = UPLOAD_PATH + '/' + encodeURIComponent(name);   // direct, no CGI
+                } else {
+                    url = '/cgi-bin/transform.py?name=' + encodeURIComponent(name);
+                    if (doUpper) url += '&uppercase=1';
+                    if (doTranslate) url += '&translate=1';
+                }
+
+                try {
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: body
+                    });
+                    statusEl.textContent = res.status;
+                    text.textContent = (await res.text()) || '(no response body)';
+                    fetchFileList();
+                } catch (err) {
+                    statusEl.textContent = 'ERR';
+                    text.textContent = 'Error: ' + err.message;
+                }
+            });
+
+            // ── file list (parsed from the /uploads/ autoindex page) ──────────────
+            function listMsg(msg, ok) {
+                const el = document.getElementById('list-msg');
+                el.textContent = msg;
+                el.className = 'font-mono text-xs ' + (ok ? 'text-emerald-400' : 'text-red-400');
+            }
+
+            function renderList(files) {
+                const ul = document.getElementById('file-list');
+                const empty = document.getElementById('empty-msg');
+                ul.innerHTML = '';
+                empty.classList.toggle('hidden', files.length !== 0);
+                files.forEach((name) => {
+                    const li = document.createElement('li');
+                    li.className = 'flex items-center justify-between gap-3 py-2';
+
+                    const span = document.createElement('span');
+                    span.className = 'font-mono text-sm text-sky-300 break-all flex-1';
+                    const a = document.createElement('a');
+                    a.href = UPLOAD_PATH + '/' + encodeURIComponent(name);
+                    a.target = '_blank';
+                    a.textContent = name;
+                    a.className = 'hover:underline';
+                    span.appendChild(a);
+
+                    const btn = document.createElement('button');
+                    btn.className = 'text-red-400 border border-red-400 hover:bg-red-900/40 rounded px-2 py-1 text-xs transition cursor-pointer';
+                    btn.textContent = 'Delete';
+                    btn.onclick = () => deleteFile(name);
+
+                    li.append(span, btn);
+                    ul.appendChild(li);
+                });
+            }
+
+            function fetchFileList() {
+                fetch(UPLOAD_PATH + '/')
+                    .then((r) => r.text())
+                    .then((html) => {
+                        const doc = new DOMParser().parseFromString(html, 'text/html');
+                        const files = [];
+                        doc.querySelectorAll('a').forEach((link) => {
+                            const name = link.textContent.trim();
+                            if (name === '..' || name === '') return;     // skip parent link
+                            if (name[name.length - 1] !== '/') files.push(name);  // skip dirs
+                        });
+                        renderList(files);
+                    })
+                    .catch(() => renderList([]));
+            }
+
+            function deleteFile(name) {
+                fetch(UPLOAD_PATH + '/' + encodeURIComponent(name), { method: 'DELETE' })
+                    .then((r) => {
+                        if (r.status === 204 || r.status === 200) {
+                            listMsg('Deleted "' + name + '".', true);
+                        } else {
+                            listMsg('Error ' + r.status + ' deleting "' + name + '".', false);
+                        }
+                        fetchFileList();
+                    })
+                    .catch((e) => listMsg('Network error: ' + e.message, false));
+            }
+
+            document.getElementById('btn-refresh').addEventListener('click', fetchFileList);
+            fetchFileList();
+        });
+    </script>
 </body>
+
 </html>

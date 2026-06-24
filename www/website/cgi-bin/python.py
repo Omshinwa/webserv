@@ -17,9 +17,9 @@ print("<h1>Python CGI</h1>")
 print("<h2>Environment</h2>")
 print("<pre>")
 for key in sorted(os.environ):
-    print("{}={}".format(key, os.environ[key]))
+    print(f"{key}={os.environ[key]}")
 print("</pre>")
 
 if body:
     print("<h2>Request body</h2>")
-    print("<pre>{}</pre>".format(body))
+    print(f"<pre>{body}</pre>")

@@ -21,6 +21,9 @@ SESS_DIR = os.path.join(os.getcwd(), "sessions")
 
 
 def respond(headers, body):
+    """
+    write the response and exit the program
+    """
     for h in headers:
         sys.stdout.write(h + "\r\n")
     sys.stdout.write("\r\n")
@@ -55,7 +58,7 @@ def read_session(sid):
 def write_session(sid, name, count):
     os.makedirs(SESS_DIR, exist_ok=True)
     with open(os.path.join(SESS_DIR, sid), "w") as f:
-        f.write("{}\n{}".format(name, count))
+        f.write(f"{name}\n{count}")
 
 
 method = os.environ.get("REQUEST_METHOD", "GET")
@@ -78,13 +81,14 @@ if method == "POST":
     length = int(os.environ.get("CONTENT_LENGTH", 0) or 0)
     name = (sys.stdin.read(length).strip() if length > 0 else "") or "anonymous"
     sid = uuid.uuid4().hex
-    write_session(sid, name, 1)
+    # Start at 0:
+    write_session(sid, name, 0)
     respond(["Status: 200 OK",
              "Content-Type: text/plain; charset=utf-8",
              # HttpOnly id for auth (JS can't read it) + a readable name for the UI.
-             "Set-Cookie: sid={}; Path=/; HttpOnly".format(sid),
-             "Set-Cookie: user={}; Path=/".format(urllib.parse.quote(name))],
-            "Logged in as '{}'. A session cookie was set on your browser.\n".format(name))
+             f"Set-Cookie: sid={sid}; Path=/; HttpOnly",
+             f"Set-Cookie: user={urllib.parse.quote(name)}; Path=/"],
+            f"Logged in as '{name}'. A session cookie was set on your browser.\n")
 
 # --- GET: do we recognise this visitor's cookie?
 sess = read_session(sid)
@@ -92,8 +96,7 @@ if sess:
     sess["count"] += 1
     write_session(sid, sess["name"], sess["count"])
     respond(["Status: 200 OK", "Content-Type: text/plain; charset=utf-8"],
-            "Welcome back, {}! Visit #{} on this session "
-            "(your browser sent cookie sid={}).\n".format(sess["name"], sess["count"], sid))
+            f"Hello {sess['name']}! You have visited this page {sess['count']} time(s).\n")
 
 respond(["Status: 200 OK", "Content-Type: text/plain; charset=utf-8"],
         "No active session. POST your name to /cgi-bin/session.py to log in.\n")

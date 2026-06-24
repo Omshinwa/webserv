@@ -37,6 +37,11 @@ class CgiHandler : public AEventHandler {
         std::string read_buffer;
 
     private:
+        // INNACCESSIBLE
+        CgiHandler();
+        CgiHandler operator=(const CgiHandler&);
+        CgiHandler(const CgiHandler&);
+
         void finish_writing();
         void complete();
 };

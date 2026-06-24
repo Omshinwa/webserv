@@ -44,7 +44,7 @@ class RequestParser {
         int status_code;
 
         // Resolved by the Connection from the Host header; NULL until then.
-        const ServerConfig* config;
+        const ServerConfig* config;  // currently not used anywhere?
 
         size_t content_length;  // parsed content length
 

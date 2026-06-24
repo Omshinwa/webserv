@@ -53,8 +53,10 @@ class EventLoop {
         void set_events(int fd, short events);
 
     private:
-        EventLoop operator=(EventLoop&);
+        // INNACCESSIBLE
+        EventLoop operator=(const EventLoop&);
         EventLoop(const EventLoop&);
+
         std::map<int, AEventHandler*> fd_to_handler;
         std::vector<pollfd> _pollfds;     // list of all the poll requests
         std::set<AEventHandler*> _owned;  // handlers the loop will delete
