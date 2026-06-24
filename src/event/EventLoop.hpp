@@ -36,31 +36,28 @@
 #include "AEventHandler.hpp"
 
 // allows for async fd, listen to events with poll() and dispatch it to the correct
-// handlers
+// handlers.
 class EventLoop {
     public:
-        // Frees every handler the loop still owns (in-flight Connections and the
-        // listening Servers), closing their fds first. Runs on normal shutdown
-        // *and* on stack unwinding if run() throws, so nothing leaks either way.
+        // Frees every handler the loop still owns, closing their fds first.
+        EventLoop();
         ~EventLoop();
 
         void run();
         void handle_event(pollfd& pfd);
-
-        // `owned` hands the handler's lifetime to the loop: once it is finished
-        // and none of its fds remain registered, the loop deletes it. Pass false
-        // for handlers someone else owns (the Servers live in main; a CgiHandler
-        // is owned by its Connection).
         void register_fd(int fd, int events, AEventHandler* handler, bool owned = false);
         void unregister_fd(int fd);
+
         // Change what an already-registered fd is polled for, e.g. switch from
         // waiting on POLLIN (reading a request) to POLLOUT (sending a response).
         void set_events(int fd, short events);
 
     private:
+        EventLoop operator=(EventLoop&);
+        EventLoop(const EventLoop&);
         std::map<int, AEventHandler*> fd_to_handler;
-        std::vector<pollfd> _pollfds;       // list of all the poll requests
-        std::set<AEventHandler*> _owned;    // handlers the loop will delete
+        std::vector<pollfd> _pollfds;     // list of all the poll requests
+        std::set<AEventHandler*> _owned;  // handlers the loop will delete
 
         // Does any still-registered fd map to this handler?
         bool has_registered_fd(AEventHandler* h) const;
