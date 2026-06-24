@@ -11,8 +11,8 @@
 #include <iostream>
 #include <stdexcept>
 
-#include "../event/EventLoop.hpp"
 #include "../event/AEventHandler.hpp"
+#include "../event/EventLoop.hpp"
 #include "../utils/Log.hpp"
 #include "../utils/Utils.hpp"
 #include "Connection.hpp"
@@ -89,19 +89,16 @@ void Server::on_tick(time_t now) {
 void Server::accept_new_connection(int listen_fd) {
     Connection* c;
 
-    try {
-        sockaddr_in addr;
-        socklen_t len = sizeof(addr);
-        int connection_fd = accept(listen_fd, (struct sockaddr*)&addr, &len);
-        if (connection_fd < 0) throw std::runtime_error(std::strerror(errno));
-        c = new Connection(event_loop, connection_fd, configs, addr);
-
-        event_loop.register_fd(c->fd, POLLIN, c, true);
-        log_event("NEW Connection Socket FD: " + utils::to_str(c->fd));
-    } catch (const std::exception& e) {
-        log_error(std::string("accept error: ") + e.what());
-        return;
+    sockaddr_in addr;
+    socklen_t len = sizeof(addr);
+    int connection_fd = accept(listen_fd, (struct sockaddr*)&addr, &len);
+    if (connection_fd < 0) {
+        log_error(std::string("accept error: ") + std::strerror(errno));
+        return;  // drop this attempt, keep the server alive
     }
+    c = new Connection(event_loop, connection_fd, configs, addr);
+    event_loop.register_fd(c->fd, POLLIN, c, true);
+    log_event("NEW Connection Socket FD: " + utils::to_str(c->fd));
 }
 
 void Server::log_info(std::string s) { std::cout << Log::color(0) << s << Log::nl; }

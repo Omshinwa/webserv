@@ -11,6 +11,7 @@
 #include <cstring>
 #include <iostream>
 #include <map>
+#include <stdexcept>
 #include <vector>
 
 #include "../utils/Log.hpp"
@@ -116,20 +117,20 @@ void CgiProcess::child_fork() {
     if (chdir(dir.c_str())) {
         Log::error("chdir FAIL");
         Log::error(std::strerror(errno));
-        exit(1);
+        throw std::runtime_error("CGI child fork fail");
     }
 
     // Log::debug("CGI child_fork running");
     if (dup2(in_fd[0], STDIN_FILENO) == -1) {
         Log::error("DUP2 FAIL");
         Log::error(std::strerror(errno));
-        exit(1);
+        throw std::runtime_error("CGI child fork fail");
     }
     std::cout << std::flush;
     if (dup2(fd[1], STDOUT_FILENO) == -1) {
         Log::error("DUP2 FAIL");
         Log::error(std::strerror(errno));
-        exit(1);
+        throw std::runtime_error("CGI child fork fail");
     }
 
     // fd[1] / in_fd[0]: after dup2 these are duplicated onto stdout/stdin. The child
@@ -205,5 +206,6 @@ void CgiProcess::child_execve() {
 
     Log::error("EXECVE FAIL");
     Log::error(std::strerror(errno));
-    exit(1);
+    throw std::runtime_error("CGI child fork fail");
+    // be careful that there's no catch between this and the main() catch
 }

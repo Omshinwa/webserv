@@ -64,9 +64,9 @@ int main(int ac, char** av) {
 
         event_loop.run();
     } catch (const std::exception& e) {
+        Log::error("MAIN LOOP EXCEPTION CATCH:");
         Log::error(e.what());
         return 1;
     }
     return 0;
 }
-
