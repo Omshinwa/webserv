@@ -4,7 +4,7 @@
 #include "../server/Connection.hpp"
 
 namespace {
-const int CGI_TIMEOUT_SEC = 100;
+const int CGI_TIMEOUT_SEC = 5;
 }  // namespace
 
 CgiHandler::CgiHandler(EventLoop& event_loop, RequestParser& req,

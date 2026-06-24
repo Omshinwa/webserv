@@ -154,6 +154,7 @@ http://localhost/profile/upload_avatar.py
         root    www/cgi-bin/
     }
 
-www/profile/upload_avatar.py
 
-www/cgi-bin/upload_avatar.py
+pgrep -a webserv          # PID + full command line, filtered by name
+pidof webserv             # just the PID(s)
+watch -n 1 'ps -o pid,rss,vsz,comm -C webserv'
