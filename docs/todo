@@ -1,15 +1,12 @@
 # Mandatory
 * cookies & session
-* test CGI that uses POST etc...
-* cgi php ?
 * servir plusieurs site web (html) propre
-* error pages (config can redirect to them)
+* read the CGI scripts and html to make sure we understand everything
 
 
 # Maybe
-<!-- * handle all the vars of CGI -->
+
 * 1.1 HTTP? chunked
-* Prettier logger (add the timestamp), make debug() info() more consistent
 * draw a schema of the whole control flow
 
 # checks to do when we're done
