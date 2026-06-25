@@ -1,19 +1,3 @@
-#include <algorithm>
-#include <cerrno>
-#include <cstddef>
-#include <cstdlib>
-#include <cstring>
-#include <ctime>
-#include <exception>
-#include <fstream>
-#include <iostream>
-#include <map>
-#include <sstream>
-#include <stdexcept>
-#include <string>
-#include <vector>
-
-// ── POSIX / system ──────────────────────────────────────────────────────────
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <netinet/in.h>
@@ -23,23 +7,17 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-// ── project ─────────────────────────────────────────────────────────────────
+#include <exception>
+#include <iostream>
+#include <map>
+#include <string>
+#include <vector>
 
-#include "utils/Log.hpp"
-#include "utils/Utils.hpp"
-//
 #include "config/Config.hpp"
-//
-
 #include "event/AEventHandler.hpp"
 #include "event/Reactor.hpp"
-//
-#include "cgi/CgiHandler.hpp"
-#include "cgi/CgiProcess.hpp"
-#include "http/RequestParser.hpp"
-#include "http/ResponseBuilder.hpp"
-#include "server/Connection.hpp"
 #include "server/Server.hpp"
+#include "utils/Log.hpp"
 
 int main(int ac, char** av) {
     if (ac > 2) {

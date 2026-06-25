@@ -1,23 +1,6 @@
 #ifndef REACTOR_H
 #define REACTOR_H
-// ── standard library ────────────────────────────────────────────────────────
-#include <algorithm>
-#include <cerrno>
-#include <cstddef>
-#include <cstdlib>
-#include <cstring>
-#include <ctime>
-#include <exception>
-#include <fstream>
-#include <iostream>
-#include <map>
-#include <set>
-#include <sstream>
-#include <stdexcept>
-#include <string>
-#include <vector>
 
-// ── POSIX / system ──────────────────────────────────────────────────────────
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <netinet/in.h>
@@ -27,12 +10,10 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-// ── project ─────────────────────────────────────────────────────────────────
+#include <map>
+#include <set>
+#include <vector>
 
-#include "../utils/Log.hpp"
-#include "../utils/Utils.hpp"
-//
-#include "../config/Config.hpp"
 #include "AEventHandler.hpp"
 
 // allows for async fd, listen to events with poll() and dispatch it to the correct

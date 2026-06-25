@@ -18,8 +18,8 @@ const time_t CONNECTION_TIMEOUT_SEC = 5;
 
 // Connection handles the buffers for reading and writing
 // It creates the Request and Response
-Connection::Connection(Reactor& reactor, int fd,
-                       const std::vector<ServerConfig>& configs, sockaddr_in addr)
+Connection::Connection(Reactor& reactor, int fd, const std::vector<ServerConfig>& configs,
+                       sockaddr_in addr)
         : AEventHandler(reactor),
           fd(fd),
           cgi(NULL),

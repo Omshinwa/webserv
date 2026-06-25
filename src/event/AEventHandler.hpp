@@ -1,23 +1,6 @@
 #ifndef AEVENTHANDLER_H
 #define AEVENTHANDLER_H
 
-// ── standard library ────────────────────────────────────────────────────────
-#include <algorithm>
-#include <cerrno>
-#include <cstddef>
-#include <cstdlib>
-#include <cstring>
-#include <ctime>
-#include <exception>
-#include <fstream>
-#include <iostream>
-#include <map>
-#include <sstream>
-#include <stdexcept>
-#include <string>
-#include <vector>
-
-// ── POSIX / system ──────────────────────────────────────────────────────────
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <netinet/in.h>
@@ -26,6 +9,11 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
+#include <cstddef>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
 
 class Reactor;
 

@@ -133,18 +133,14 @@ void CgiProcess::child_fork() {
     }
     std::cout << std::flush;
     if (dup2(out_fd[1], STDOUT_FILENO) == -1) {
-    if (dup2(out_fd[1], STDOUT_FILENO) == -1) {
         Log::error("DUP2 FAIL");
         Log::error(std::strerror(errno));
         throw std::runtime_error("CGI child fork fail");
     }
 
     // out_fd[1] / in_fd[0]: after dup2 these are duplicated onto stdout/stdin. The child
-    // out_fd[1] / in_fd[0]: after dup2 these are duplicated onto stdout/stdin. The child
     // only needs 0 and 1, so the original numbered copies are redundant and get closed
     // for hygiene.
-    close(out_fd[0]);
-    close(out_fd[1]);
     close(out_fd[0]);
     close(out_fd[1]);
     close(in_fd[0]);

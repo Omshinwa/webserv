@@ -2,14 +2,14 @@
 
 #include "../event/Reactor.hpp"
 #include "../server/Connection.hpp"
+#include "../utils/Log.hpp"
 
 namespace {
 const int CGI_TIMEOUT_SEC = 5;
 }  // namespace
 
-CgiHandler::CgiHandler(Reactor& reactor, RequestParser& req,
-                       const ServerConfig& config, const std::string& interpreter,
-                       const std::string& script_path)
+CgiHandler::CgiHandler(Reactor& reactor, RequestParser& req, const ServerConfig& config,
+                       const std::string& interpreter, const std::string& script_path)
         : AEventHandler(reactor),
           cgi(req, config, interpreter, script_path),
           _owner(NULL),
