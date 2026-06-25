@@ -1,6 +1,7 @@
 #include "Server.hpp"
 
 #include <arpa/inet.h>
+#include <netdb.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -12,7 +13,7 @@
 #include <stdexcept>
 
 #include "../event/AEventHandler.hpp"
-#include "../event/EventLoop.hpp"
+#include "../event/Reactor.hpp"
 #include "../utils/Log.hpp"
 #include "../utils/Utils.hpp"
 #include "Connection.hpp"
@@ -21,8 +22,8 @@
 // share this host:port — i.e. the virtual hosts reachable through this socket.
 // The caller (group_by_host_port) guarantees they all share host:port, so the
 // first one defines the endpoint to bind.
-Server::Server(EventLoop& event_loop, const std::vector<ServerConfig>& configs)
-        : AEventHandler(event_loop), configs(configs) {
+Server::Server(Reactor& reactor, const std::vector<ServerConfig>& configs)
+        : AEventHandler(reactor), configs(configs) {
     const ServerConfig& first = configs[0];
     create_socket(first.host, first.port);
     log_event("Server Listening to: " + first.host + ":" + utils::to_str(first.port) +
@@ -43,7 +44,7 @@ void Server::create_socket(const std::string& host, int port) {
         int opt = 1;  // Allows to restart without TIME_WAIT
         setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
         // The fd is made non-blocking when the loop registers it
-        // (EventLoop::register_fd), before any accept() can run.
+        // (Reactor::register_fd), before any accept() can run.
     }
 
     // binds it
@@ -52,11 +53,22 @@ void Server::create_socket(const std::string& host, int port) {
         std::memset(&addr, 0, sizeof(addr));  // zero — there are padding fields
         addr.sin_family = AF_INET;            // must match socket()'s domain
         addr.sin_port = htons(port);          // network byte order
-        if (host.empty() || host == "0.0.0.0")
+        if (host.empty() || host == "0.0.0.0") {
             addr.sin_addr.s_addr = htonl(INADDR_ANY);  // all interfaces
-        else
-            addr.sin_addr.s_addr = inet_addr(host.c_str());  // specific IP
-
+        } else {
+            // inet_addr is forbidden; getaddrinfo resolves a dotted IP or hostname
+            struct addrinfo hints;
+            std::memset(&hints, 0, sizeof(hints));
+            hints.ai_family = AF_INET;        // IPv4, to match sockaddr_in
+            hints.ai_socktype = SOCK_STREAM;  // TCP
+            struct addrinfo* res = NULL;
+            if (getaddrinfo(host.c_str(), NULL, &hints, &res) != 0 || res == NULL) {
+                close(fd);
+                throw std::runtime_error("getaddrinfo failed for host: " + host);
+            }
+            addr.sin_addr = ((struct sockaddr_in*)res->ai_addr)->sin_addr;  // specific IP
+            freeaddrinfo(res);
+        }
         if (bind(fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
             close(fd);
             std::cerr << Log::red_bg << "bind error" << Log::nl;
@@ -96,8 +108,8 @@ void Server::accept_new_connection(int listen_fd) {
         log_error(std::string("accept error: ") + std::strerror(errno));
         return;  // drop this attempt, keep the server alive
     }
-    c = new Connection(event_loop, connection_fd, configs, addr);
-    event_loop.register_fd(c->fd, POLLIN, c, true);
+    c = new Connection(reactor, connection_fd, configs, addr);
+    reactor.register_fd(c->fd, POLLIN, c, true);
     log_event("NEW Connection Socket FD: " + utils::to_str(c->fd));
 }
 

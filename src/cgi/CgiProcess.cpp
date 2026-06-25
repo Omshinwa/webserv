@@ -51,7 +51,7 @@ CgiProcess::CgiProcess(const RequestParser& req, const ServerConfig& config,
     exec_status = 0;
     pid = -1;
 
-    if (pipe(fd) == -1 || pipe(in_fd) == -1) {
+    if (pipe(out_fd) == -1 || pipe(in_fd) == -1) {
         Log::error("CGI pipe FAIL");
         Log::error(std::strerror(errno));
         exec_status = 500;
@@ -66,10 +66,10 @@ CgiProcess::CgiProcess(const RequestParser& req, const ServerConfig& config,
         child_fork();  // never returns
     }
     // parent
-    close(fd[1]);
+    close(out_fd[1]);
     close(in_fd[0]);
     if (pid < 0) {  // failed
-        close(fd[0]);
+        close(out_fd[0]);
         close(in_fd[1]);
         Log::error("CGI fork FAIL");
         Log::error(std::strerror(errno));
@@ -123,17 +123,17 @@ void CgiProcess::child_fork() {
         throw std::runtime_error("CGI child fork fail");
     }
     std::cout << std::flush;
-    if (dup2(fd[1], STDOUT_FILENO) == -1) {
+    if (dup2(out_fd[1], STDOUT_FILENO) == -1) {
         Log::error("DUP2 FAIL");
         Log::error(std::strerror(errno));
         throw std::runtime_error("CGI child fork fail");
     }
 
-    // fd[1] / in_fd[0]: after dup2 these are duplicated onto stdout/stdin. The child
+    // out_fd[1] / in_fd[0]: after dup2 these are duplicated onto stdout/stdin. The child
     // only needs 0 and 1, so the original numbered copies are redundant and get closed
     // for hygiene.
-    close(fd[0]);
-    close(fd[1]);
+    close(out_fd[0]);
+    close(out_fd[1]);
     close(in_fd[0]);
     close(in_fd[1]);
     child_execve();

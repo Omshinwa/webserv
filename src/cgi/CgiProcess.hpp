@@ -21,8 +21,8 @@ class CgiProcess {
         std::string interpreter;
         std::string script_path;
         pid_t pid;
-        int fd[2];     // parent reads the child's stdout from fd[0]
-        int in_fd[2];  // parent writes the child's stdin to in_fd[1]
+        int out_fd[2];  // parent reads the child's stdout from out_fd[0]
+        int in_fd[2];   // parent writes the child's stdin to in_fd[1]
         //
         // // private
         //

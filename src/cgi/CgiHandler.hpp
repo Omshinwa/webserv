@@ -23,7 +23,7 @@ class Connection;
 
 class CgiHandler : public AEventHandler {
     public:
-        CgiHandler(EventLoop& event_loop, RequestParser& req, const ServerConfig& config,
+        CgiHandler(Reactor& reactor, RequestParser& req, const ServerConfig& config,
                    const std::string& interpreter, const std::string& script_path);
         ~CgiHandler();
         CgiProcess cgi;
