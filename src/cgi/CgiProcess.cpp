@@ -38,11 +38,7 @@ int interpret_status(int status) {
         Log::debug("CGI returned -1 / error");
         return 502;
     }
-    if (WIFSIGNALED(status) && WTERMSIG(status) == SIGALRM) {
-        Log::warning("CGI timed out (SIGALRM)");
-        return 504;
-    }
-    Log::debug("CGI signaled / killed");
+    Log::warning("CGI signaled / killed");
     return 502;
 }
 }  // namespace

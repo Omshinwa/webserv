@@ -8,37 +8,31 @@
 # **Sockets**
 Sockets are an abstraction provided by the OS to enable communication between different processes either on the same machine or over a network. They act as endpoints in a two-way communication channel. So that when two machines or two apps need to communicate to each others other the internet or a local network, each side of that communication will create a socket.
 
-typical flow:
-
-![Socket flow](socket_flow.png)
-
 ## **Socket type**
 ### Datagram (SOCK_DGRAM)
 In Internet Protocol terminology, the basic unit of data transfer is a datagram.
-It's the D in UDP
+It's also the D in UDP (vs TCP).
 ### Stream (SOCK_STREAM)
 This type of socket is connection-oriented. Establish an end-to-end connection by using the bind(), listen(), accept(), and connect() APIs. SOCK_STREAM sends data without errors or duplication, and receives the data in the sending order.
 ### Raw (SOCK_RAW)
-raaw
+raw
 
-# **socket fd states**:
+---
 
-| State         | How you get there   | What you can do                                   |
-|---------------|---------------------|---------------------------------------------------|
-| **Unbound**   | `socket()`          | `bind`, `connect`, `close`                        |
-| **Bound**     | `bind()` on unbound | `listen` (server) or `connect` (rare for clients) |
-| **Listening** | `listen()` on bound | `accept`, `close` — never `recv`/`send`           |
-| **Connected** | `accept()` (server) or `connect()` (client) | `recv`, `send`, `shutdown`, `close` |
-| **Shut down (one side)** | `shutdown(fd, SHUT_RD/WR)` | Other direction still works     |
-| **Closed**    | `close()`           | fd is gone                                        |
+Typical flow:
+
+![Socket flow](socket_flow.png)
 
 ---
 
 **`int socket(int __domain, int __type, int __protocol)`**  
-    creates a socket fd (for communication). A socker fd is a fd plus a 5-tuple of state the kernel maintains: (protocol, local IP, local port, remote IP, remote port). Reachable from other processes, other machines, the internet.  
-    domain: IPv4  
-    type: stream (TCP)  
-    protocol: 0 (for some type/domain combinaison, protocol allows us to select between several protocols)  
+
+    Creates a socket fd (for communication). A socker fd is a fd plus a 5-tuple of state the kernel maintains: (protocol, local IP, local port, remote IP, remote port). Reachable from other processes, other machines, the internet...
+    We fill it with those arguments:
+
+    * domain: IPv4  
+    * type: stream (TCP)  
+    * protocol: 0 (for some type/domain combinaison, protocol allows us to select between several protocols)  
 
 **`int bind(int __fd, const sockaddr *__addr, socklen_t __len)`**  
     bind the socket fd to an address (IPv4 + port)  
