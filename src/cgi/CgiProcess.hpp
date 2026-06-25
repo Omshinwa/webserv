@@ -10,8 +10,6 @@
 
 class CgiProcess {
     public:
-        enum state { READING, WRITING };
-        state state;
         CgiProcess(const RequestParser& req, const ServerConfig& config,
                    const std::string& interpreter, const std::string& script_path);
         void reap();
@@ -29,6 +27,11 @@ class CgiProcess {
         // // private
         //
     private:
+        // INNACCESSIBLE
+        CgiProcess();
+        CgiProcess operator=(const CgiProcess&);
+        CgiProcess(const CgiProcess&);
+
         void child_fork();
         void child_execve();
 };  // namespace CgiProcess
