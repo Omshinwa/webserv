@@ -1,5 +1,5 @@
-#ifndef EVENTLOOP_H
-#define EVENTLOOP_H
+#ifndef REACTOR_H
+#define REACTOR_H
 // ── standard library ────────────────────────────────────────────────────────
 #include <algorithm>
 #include <cerrno>
@@ -37,11 +37,11 @@
 
 // allows for async fd, listen to events with poll() and dispatch it to the correct
 // handlers.
-class EventLoop {
+class Reactor {
     public:
         // Frees every handler the loop still owns, closing their fds first.
-        EventLoop();
-        ~EventLoop();
+        Reactor();
+        ~Reactor();
 
         void run();
         void handle_event(pollfd& pfd);
@@ -54,8 +54,8 @@ class EventLoop {
 
     private:
         // INNACCESSIBLE
-        EventLoop operator=(const EventLoop&);
-        EventLoop(const EventLoop&);
+        Reactor operator=(const Reactor&);
+        Reactor(const Reactor&);
 
         std::map<int, AEventHandler*> fd_to_handler;
         std::vector<pollfd> _pollfds;     // list of all the poll requests

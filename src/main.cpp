@@ -32,7 +32,7 @@
 //
 
 #include "event/AEventHandler.hpp"
-#include "event/EventLoop.hpp"
+#include "event/Reactor.hpp"
 //
 #include "cgi/CgiHandler.hpp"
 #include "cgi/CgiProcess.hpp"
@@ -53,16 +53,16 @@ int main(int ac, char** av) {
 
         std::map<std::string, std::vector<ServerConfig> > groups =
                 Config::group_by_host_port(configs);
-        EventLoop event_loop;
+        Reactor reactor;
 
         for (std::map<std::string, std::vector<ServerConfig> >::iterator it =
                      groups.begin();
              it != groups.end(); ++it) {
-            Server* s = new Server(event_loop, it->second);
-            event_loop.register_fd(s->fd, POLLIN, s, true);
+            Server* s = new Server(reactor, it->second);
+            reactor.register_fd(s->fd, POLLIN, s, true);
         }
 
-        event_loop.run();
+        reactor.run();
     } catch (const std::exception& e) {
         Log::error("MAIN LOOP EXCEPTION CATCH:");
         Log::error(e.what());

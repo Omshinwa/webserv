@@ -18,7 +18,7 @@ SRC			=	src/main.cpp					\
 				src/http/RequestParser.cpp		\
 				src/http/ResponseBuilder.cpp	\
 				src/http/ResponseBuilder_cgi.cpp\
-				src/event/EventLoop.cpp			\
+				src/event/Reactor.cpp			\
 				src/event/signal.cpp			\
 
 OBJ			=	$(SRC:.cpp=.o)

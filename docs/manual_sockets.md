@@ -1,9 +1,9 @@
+This is a document that describes what I learned about sockets and polls.
+
 ## Contents
 - [Sockets](#sockets)
   - [Socket type](#socket-type)
-- [socket fd states](#socket-fd-states)
 - [POLL](#poll)
-- [HTTP](#http)
 
 # **Sockets**
 Sockets are an abstraction provided by the OS to enable communication between different processes either on the same machine or over a network. They act as endpoints in a two-way communication channel. So that when two machines or two apps need to communicate to each others other the internet or a local network, each side of that communication will create a socket.
@@ -74,23 +74,29 @@ A full-bidirectionnal channel between server and client. You can recv and send o
 Poll is what allows you to have a lots of fds, you put them in a poll, only when one has a change
 does poll() reacts and allows you to keep going.
 
-select, poll, epoll, allows to create a poll of sockets where you handle the ones that are ready.
-
 poll.revents is a bitmask, the main values to care about:
 
 * POLLIN: Ready to read
 * POLLOUT: Writing wont block
 
 * POLLHUP: _Hang up_ Peer closed cleaned, end of conversation
-_FAILURES_
-* POLLERR: _Error_
-* POLLNVAL: _Invalidm_ the fd in the `pollfd` struct is not valid fd. (almost always a bug in the code, not a network event)
 
-epoll vs poll
+FAILURES
+
+* POLLERR, POLLNVAL
+
+## select() vs poll() vs epoll() vs kqueue()
+|   |                                                                                                            |
+| ---------- | -------------------------------------------------------------------------------------------------------------------- |
+| `select`   | The legacy solution. Ancient, but works everywhere.                                                                  |
+| `poll`     | Highly portable across UNIX.                                                                                         |
+| `epoll`    | Linux only, but it returns directly the fd that had events. Poll() only tells you if in the poll of fd if anything changed. |
+| `kqueue`   | macOS equivalent, can also listen to signals, child process statuses, and asynchronous I/O timers.                   |
+
 These event notification mechanisms drastically reduce CPU usage and latency by avoiding idle waiting or redundant polling.
 
-**fcntl(fd, F_SETFL, O_NONBLOCK);**
-_What "blocking" means:_
+## What "blocking" means:
+
 
 A syscall is blocking when it puts your thread to sleep until the operation can complete. The OS suspends your process; the CPU runs other things; you wake up when the kernel has something for you.
 
@@ -100,69 +106,21 @@ For each socket call, "nothing to do" looks different:
 * `recv()` blocks when the receive buffer is empty (peer hasn't sent anything).
 * `send()` blocks when the kernel's send buffer is full (peer isn't draining fast enough).
 
-A non-blocking fd: instead of sleeping, the syscall returns -1 immediately and sets errno to EAGAIN/EWOULDBLOCK. The thread keeps running.
+A non-blocking fd: instead of sleeping, the syscall returns -1 immediately and sets errno to `EAGAIN`/`EWOULDBLOCK`. The thread keeps running.
 
-# HTTP
+**`int fcntl(int fd, int op, ... /* arg */ );`**
 
-## \r\n vs \n
-CRLF means Carriage Return + Line Feed.
+    fcntl() does an operation on an fd. To set my fd as non blocking:
 
-In the HTTP/1.1 protocol, all header fields except Host are optional. 
-A request line containing only the path name is accepted by servers to maintain compatibility with HTTP clients before the HTTP/1.0 specification in RFC 1945.
+    fcntl(fd, F_SETFL, O_NONBLOCK);
 
- A general-purpose web server is required to implement at least GET and HEAD, and all other methods are considered optional by the specification.[18]: §9.1 
+    fd         : which fd to operate on
+    F_SETFL    : is the 'set' operation.
+    O_NONBLOCK : we set the fd as 'non blocking'.
 
-Method names are case sensitive.[4]: §3 [18]: §9.1  This is in contrast to HTTP header field names which are case-insensitive.[18]: §6.3  
+## what is multiplexing?
 
-**Don't trim the key**. Per RFC 7230 §3.2.4, whitespace between the field name and the colon is forbidden (Host : example.com ← invalid). You should reject it with 400, not silently strip it. The grammar is field-name ":" OWS field-value OWS — leading/trailing OWS only applies to the value side.
+Multiplexer (MUX): a circuit that selects one of several data inputs and routes it, unchanged, to a single output. 
+poll() is an example of multiplexing.
 
-**Header names are case-insensitive (Host == host == HOST).** You typically normalize to lowercase when storing in the map so lookups are consistent:
-
-414 URI Too Long — request line (specifically the URI) exceeds the limit
-431 Request Header Fields Too Large — a header line or total headers exceed
-400 Bad Request — generic fallback
-
-# CGI
-
-The CGI produces a *CGI response*: a small set of headers, a blank line, then the body.
-
-
-Content-Type: text/html        <- CGI headers (script writes these)
-                               <- blank line (\r\n)
-<html>...</html>               <- body
-
-There's no status line, no Content-Length etc.
-
-The authoritative spec is RFC 3875 — "The Common Gateway Interface (CGI) Version 1.1": https://datatracker.ietf.org/doc/html/rfc3875
-
-That's the document to cite. The environment variables are in §4.1 and the meta-variable rules in §4. A few other useful references:
-
-# TESTS
-
-## stress test
-
-siege -b http://127.0.0.1:8080/
-
-
-http://localhost/profile/upload_avatar.py
-
-
-    location /profile {
-        methods GET POST;
-        root    www/cgi-bin/
-    }
-
-
-pgrep -a webserv          # PID + full command line, filtered by name
-pidof webserv             # just the PID(s)
-watch -n 1 'ps -o pid,rss,vsz,comm -C webserv'
-
-Security
-test the traversal path hack (remonter depuis le root du projet pour chopper des fichiers externes)
-
-    nc localhost 8080
-
-then
-
-    GET /../../../../../../etc/passwd HTTP/1.0
-    Host: localhost
+The opposite is demultiplexing (DEMUX). Our Reactor demultiplexes I/O events and dispatches them to handlers.

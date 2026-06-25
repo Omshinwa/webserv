@@ -6,3 +6,8 @@
 
 * 1.1 HTTP? chunked
 * draw a schema of the whole control flow
+
+
+* check broken 42 tester script
+* in_fd out_fd
+* forbidden func

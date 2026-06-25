@@ -106,9 +106,9 @@ bool ResponseBuilder::is_cgi_request(const std::string& filepath) {
     if (interpreter == NULL) return false;
     // note: the interpreter can be equal to the empty string
 
-    // Don't run it here — that would block the event loop. Flag the request as
+    // Don't run it here — that would block the reactor. Flag the request as
     // CGI and stash what's needed; Connection::queue_response() forks the script
-    // and registers its pipes so the loop drives it asynchronously.
+    // and registers its pipes so the reactor drives it asynchronously.
     waiting_for_cgi = true;
     cgi_interpreter = *interpreter;
     cgi_filepath = filepath;

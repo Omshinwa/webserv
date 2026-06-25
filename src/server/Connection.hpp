@@ -22,7 +22,7 @@ class Connection : public AEventHandler {
 
         // configs: all server blocks sharing this listening socket; used to
         // resolve the virtual host once the request's Host header is known.
-        Connection(EventLoop& event_loop, int listen_fd,
+        Connection(Reactor& reactor, int listen_fd,
                    const std::vector<ServerConfig>& configs, sockaddr_in addr);
         ~Connection();
 
@@ -32,7 +32,7 @@ class Connection : public AEventHandler {
 
         // Once you've parsed a complete request, build the response and call this.
         void queue_response();
-        // Spawn the CGI script and register its pipes with the event loop; the
+        // Spawn the CGI script and register its pipes with the reactor; the
         // client socket idles until on_cgi_done() fires.
         void start_cgi(const std::string& interpreter, const std::string& filepath,
                        const ServerConfig& config);

@@ -27,11 +27,11 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-class EventLoop;
+class Reactor;
 
 class AEventHandler {
     public:
-        AEventHandler(EventLoop& event_loop) : finished(false), event_loop(event_loop) {}
+        AEventHandler(Reactor& reactor) : finished(false), reactor(reactor) {}
 
         virtual ~AEventHandler() {}
         virtual void on_readable() = 0;
@@ -39,7 +39,7 @@ class AEventHandler {
         // should turn finished to true if enough time has passed
         virtual void on_tick(time_t now) = 0;
         bool finished;  // is it done?
-        EventLoop& event_loop;
+        Reactor& reactor;
 
         inline void touch() { _last_activity = time(NULL); }
         time_t _last_activity;

@@ -1,16 +1,16 @@
 #include "CgiHandler.hpp"
 
-#include "../event/EventLoop.hpp"
+#include "../event/Reactor.hpp"
 #include "../server/Connection.hpp"
 
 namespace {
 const int CGI_TIMEOUT_SEC = 5;
 }  // namespace
 
-CgiHandler::CgiHandler(EventLoop& event_loop, RequestParser& req,
+CgiHandler::CgiHandler(Reactor& reactor, RequestParser& req,
                        const ServerConfig& config, const std::string& interpreter,
                        const std::string& script_path)
-        : AEventHandler(event_loop),
+        : AEventHandler(reactor),
           cgi(req, config, interpreter, script_path),
           _owner(NULL),
           write_buffer(req.body),
@@ -37,7 +37,7 @@ void CgiHandler::on_writable() {
 
 void CgiHandler::finish_writing() {
     if (cgi.in_fd[1] == -1) return;
-    event_loop.unregister_fd(cgi.in_fd[1]);  // closes the fd -> EOF to the child
+    reactor.unregister_fd(cgi.in_fd[1]);  // closes the fd -> EOF to the child
     cgi.in_fd[1] = -1;
 }
 
@@ -73,8 +73,8 @@ void CgiHandler::on_tick(time_t now) {
 }
 
 void CgiHandler::complete() {
-    // We're owned by the event loop. Don't unregister our own pipes here: leaving
-    // them in _pollfds keeps us reachable so the loop's reap pass closes them and
+    // We're owned by the reactor. Don't unregister our own pipes here: leaving
+    // them in _pollfds keeps us reachable so the reactor's reap pass closes them and
     // deletes us. Instead just flip finished, hand the output to the Connection,
     // and sever the two-way link both ways (the Connection switches to sending
     // the response and must stop pointing at us; we stop pointing at it).

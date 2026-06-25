@@ -14,7 +14,7 @@ class Connection;
 
 class Server : public AEventHandler {
     public:
-        Server(EventLoop& event_loop, const std::vector<ServerConfig>& configs);
+        Server(Reactor& reactor, const std::vector<ServerConfig>& configs);
         ~Server();
 
         int fd;

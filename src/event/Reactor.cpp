@@ -1,18 +1,18 @@
-#include "EventLoop.hpp"
+#include "Reactor.hpp"
 
 #include "signal.hpp"
 
 namespace {
-const int POLL_TIMEOUT_MS = 3000;
+const int POLL_TIMEOUT_MS = 1000000;
 }  // namespace
 
-EventLoop::EventLoop() {}
+Reactor::Reactor() {}
 
 // Close and free every handler the loop owns (in-flight Connections and the
 // listening Servers), which also tears down any CGI pipes and reaps children.
 // A handler can span several fds (a CgiHandler owns two pipes), so unregister
 // every owned fd first, then delete each owned handler exactly once.
-EventLoop::~EventLoop() {
+Reactor::~Reactor() {
     std::set<AEventHandler*> dead = _owned;
     for (size_t i = 0; i < _pollfds.size();) {
         if (_owned.count(fd_to_handler[_pollfds[i].fd]))
@@ -26,8 +26,8 @@ EventLoop::~EventLoop() {
 }
 
 // events = POLLIN or POLLOUT;
-void EventLoop::register_fd(int fd, int events, AEventHandler* handler, bool owned) {
-    // Take ownership first: if a push_back below throws, ~EventLoop still frees it.
+void Reactor::register_fd(int fd, int events, AEventHandler* handler, bool owned) {
+    // Take ownership first: if a push_back below throws, ~Reactor still frees it.
     if (owned) _owned.insert(handler);
     pollfd polling_req;
     polling_req.fd = fd;
@@ -38,14 +38,14 @@ void EventLoop::register_fd(int fd, int events, AEventHandler* handler, bool own
     fcntl(fd, F_SETFL, O_NONBLOCK);
 }
 
-bool EventLoop::has_registered_fd(AEventHandler* h) const {
+bool Reactor::has_registered_fd(AEventHandler* h) const {
     for (std::map<int, AEventHandler*>::const_iterator it = fd_to_handler.begin();
          it != fd_to_handler.end(); ++it)
         if (it->second == h) return true;
     return false;
 }
 
-void EventLoop::unregister_fd(int fd) {
+void Reactor::unregister_fd(int fd) {
     fd_to_handler.erase(fd);
     close(fd);
     for (size_t i = 0; i < _pollfds.size(); i++) {
@@ -56,7 +56,7 @@ void EventLoop::unregister_fd(int fd) {
     }
 }
 
-void EventLoop::set_events(int fd, short events) {
+void Reactor::set_events(int fd, short events) {
     for (size_t i = 0; i < _pollfds.size(); i++) {
         if (_pollfds[i].fd == fd) {
             _pollfds[i].events = events;
@@ -68,7 +68,7 @@ void EventLoop::set_events(int fd, short events) {
 // poll uses events and revents:
 // events  = your question  → "is this fd readable? writable?"
 // revents = the answer     → "yes readable / yes writable / hung up / error"
-void EventLoop::run() {
+void Reactor::run() {
     webserv::setup_signals();
     while (!webserv::g_stop) {
         // poll will set all the revents to 0, then
@@ -116,7 +116,7 @@ void EventLoop::run() {
     }
 }
 
-void EventLoop::handle_event(pollfd& pfd) {
+void Reactor::handle_event(pollfd& pfd) {
     AEventHandler* h = fd_to_handler[pfd.fd];
     int revents = pfd.revents;
     // POLLHUP = peer closed its end (e.g. a CGI child that exited)

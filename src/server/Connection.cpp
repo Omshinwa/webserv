@@ -7,7 +7,7 @@
 #include <cstring>
 #include <ctime>
 
-#include "../event/EventLoop.hpp"
+#include "../event/Reactor.hpp"
 #include "../http/ResponseBuilder.hpp"
 #include "../utils/Log.hpp"
 #include "../utils/Utils.hpp"
@@ -18,9 +18,9 @@ const time_t CONNECTION_TIMEOUT_SEC = 5;
 
 // Connection handles the buffers for reading and writing
 // It creates the Request and Response
-Connection::Connection(EventLoop& event_loop, int fd,
+Connection::Connection(Reactor& reactor, int fd,
                        const std::vector<ServerConfig>& configs, sockaddr_in addr)
-        : AEventHandler(event_loop),
+        : AEventHandler(reactor),
           fd(fd),
           cgi(NULL),
           _send_offset(0),
@@ -35,7 +35,7 @@ Connection::Connection(EventLoop& event_loop, int fd,
 }
 
 Connection::~Connection() {
-    // The CgiHandler is owned by the event loop, not by us. If one is still in
+    // The CgiHandler is owned by the reactor, not by us. If one is still in
     // flight when we're torn down (client gone mid-CGI, or shutdown), just drop
     // its back-pointer so it won't call on_cgi_done() into freed memory;
     if (cgi) cgi->_owner = NULL;
@@ -127,7 +127,7 @@ void Connection::queue_response() {
     request.remote_addr = remote_addr;
     ResponseBuilder response(request, config);
 
-    // Async CGI: hand off to the event loop. The CgiHandler will call
+    // Async CGI: hand off to the reactor. The CgiHandler will call
     // on_cgi_done() once the script exits; nothing here blocks.
     if (response.waiting_for_cgi) {
         start_cgi(response.cgi_interpreter, response.cgi_filepath, config);
@@ -138,12 +138,12 @@ void Connection::queue_response() {
     _send_offset = 0;
     // Response is ready: stop waiting to read, start waiting to write. on_writable
     // drains _send_buf and sets finished once the whole response has gone out.
-    event_loop.set_events(fd, POLLOUT);
+    reactor.set_events(fd, POLLOUT);
 }
 
 void Connection::start_cgi(const std::string& interpreter, const std::string& filepath,
                            const ServerConfig& config) {
-    cgi = new CgiHandler(event_loop, request, config, interpreter, filepath);
+    cgi = new CgiHandler(reactor, request, config, interpreter, filepath);
     cgi->_owner = this;
 
     // fork()/pipe() failed -> answer immediately (exec_status is a 5xx). The
@@ -160,9 +160,9 @@ void Connection::start_cgi(const std::string& interpreter, const std::string& fi
     // handler's lifetime to the loop (owned=true): once it's finished with no
     // fds left, the loop closes the pipes and frees it. The client socket goes
     // idle (events 0) until the CGI completes and calls back into on_cgi_done().
-    event_loop.register_fd(cgi->cgi.out_fd[0], POLLIN, cgi, true);
-    event_loop.register_fd(cgi->cgi.in_fd[1], POLLOUT, cgi, true);
-    event_loop.set_events(fd, 0);
+    reactor.register_fd(cgi->cgi.out_fd[0], POLLIN, cgi, true);
+    reactor.register_fd(cgi->cgi.in_fd[1], POLLOUT, cgi, true);
+    reactor.set_events(fd, 0);
 }
 
 void Connection::on_cgi_done(CgiHandler& cgi) {
@@ -170,7 +170,7 @@ void Connection::on_cgi_done(CgiHandler& cgi) {
     ResponseBuilder response(cgi);
     _send_buf = response.build();
     _send_offset = 0;
-    event_loop.set_events(fd, POLLOUT);
+    reactor.set_events(fd, POLLOUT);
 }
 
 const ServerConfig& Connection::resolve_virtual_host(const std::string& host) const {
