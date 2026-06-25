@@ -49,31 +49,27 @@ void Server::create_socket(const std::string& host, int port) {
 
     // binds it
     {
-        sockaddr_in addr;
-        std::memset(&addr, 0, sizeof(addr));  // zero — there are padding fields
-        addr.sin_family = AF_INET;            // must match socket()'s domain
-        addr.sin_port = htons(port);          // network byte order
-        if (host.empty() || host == "0.0.0.0") {
-            addr.sin_addr.s_addr = htonl(INADDR_ANY);  // all interfaces
-        } else {
-            // inet_addr is forbidden; getaddrinfo resolves a dotted IP or hostname
-            struct addrinfo hints;
-            std::memset(&hints, 0, sizeof(hints));
-            hints.ai_family = AF_INET;        // IPv4, to match sockaddr_in
-            hints.ai_socktype = SOCK_STREAM;  // TCP
-            struct addrinfo* res = NULL;
-            if (getaddrinfo(host.c_str(), NULL, &hints, &res) != 0 || res == NULL) {
-                close(fd);
-                throw std::runtime_error("getaddrinfo failed for host: " + host);
-            }
-            addr.sin_addr = ((struct sockaddr_in*)res->ai_addr)->sin_addr;  // specific IP
-            freeaddrinfo(res);
-        }
-        if (bind(fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
+        struct addrinfo hints;
+        std::memset(&hints, 0, sizeof(hints));
+        hints.ai_family = AF_INET;        // IPv4, to match the socket()
+        hints.ai_socktype = SOCK_STREAM;  // TCP
+        hints.ai_flags = AI_PASSIVE;  // node==NULL -> wildcard (INADDR_ANY) for binding
+
+        // NULL node => bind to all interfaces; otherwise resolve the given host
+        const char* node = (host.empty() || host == "0.0.0.0") ? NULL : host.c_str();
+        std::string service = utils::to_str(port);
+
+        struct addrinfo* res = NULL;
+        if (getaddrinfo(node, service.c_str(), &hints, &res) != 0 || res == NULL) {
             close(fd);
-            std::cerr << Log::red_bg << "bind error" << Log::nl;
+            throw std::runtime_error("getaddrinfo failed for host: " + host);
+        }
+        if (bind(fd, res->ai_addr, res->ai_addrlen) == -1) {
+            freeaddrinfo(res);  // free before throwing
+            close(fd);
             throw std::runtime_error(std::strerror(errno));
         }
+        freeaddrinfo(res);
     }
 
     // listen
