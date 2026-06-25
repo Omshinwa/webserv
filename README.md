@@ -94,6 +94,7 @@ Classic references used while building the project:
 - RFC 1945 — *Hypertext Transfer Protocol — HTTP/1.0*:
   http://abcdrfc.free.fr/rfc-vf/rfc1945.html
 - RFC 3875 — *The Common Gateway Interface (CGI) Version 1.1*:
+  https://datatracker.ietf.org/doc/html/rfc3875
   https://fr-academic.com/dic.nsf/frwiki/399061
 - `man 2 poll`, `man 2 socket`, `man 2 accept`, `man 2 fork`, `man 2 execve`,
   `man 7 socket` — POSIX system-call references

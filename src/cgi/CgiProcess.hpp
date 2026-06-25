@@ -12,6 +12,8 @@ class CgiProcess {
     public:
         CgiProcess(const RequestParser& req, const ServerConfig& config,
                    const std::string& interpreter, const std::string& script_path);
+        ~CgiProcess();
+
         void reap();
         void kill_child();
 
@@ -21,11 +23,9 @@ class CgiProcess {
         std::string interpreter;
         std::string script_path;
         pid_t pid;
-        int fd[2];     // parent reads the child's stdout from fd[0]
-        int in_fd[2];  // parent writes the child's stdin to in_fd[1]
-        //
-        // // private
-        //
+        int out_fd[2];  // parent reads the child's stdout from out_fd[0]
+        int in_fd[2];   // parent writes the child's stdin to in_fd[1]
+
     private:
         // INNACCESSIBLE
         CgiProcess();
@@ -34,6 +34,6 @@ class CgiProcess {
 
         void child_fork();
         void child_execve();
-};  // namespace CgiProcess
+};
 
 #endif

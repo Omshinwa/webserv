@@ -47,7 +47,7 @@ void CgiHandler::on_readable() {
     if (finished) return;
 
     char buf[4096];
-    ssize_t n = read(cgi.fd[0], buf, sizeof(buf));
+    ssize_t n = read(cgi.out_fd[0], buf, sizeof(buf));
     if (n > 0) {
         touch();
         read_buffer.append(buf, n);

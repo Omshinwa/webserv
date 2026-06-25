@@ -4,19 +4,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include <cerrno>
-#include <csignal>
-#include <cstddef>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <iostream>
-#include <map>
-#include <vector>
-
 #include "../event/AEventHandler.hpp"
-#include "../utils/Log.hpp"
-#include "../utils/Utils.hpp"
 #include "CgiProcess.hpp"
 
 class Connection;
@@ -26,6 +14,7 @@ class CgiHandler : public AEventHandler {
         CgiHandler(EventLoop& event_loop, RequestParser& req, const ServerConfig& config,
                    const std::string& interpreter, const std::string& script_path);
         ~CgiHandler();
+
         CgiProcess cgi;
         Connection* _owner;  // who to notify on completion
 

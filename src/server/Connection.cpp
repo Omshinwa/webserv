@@ -160,7 +160,7 @@ void Connection::start_cgi(const std::string& interpreter, const std::string& fi
     // handler's lifetime to the loop (owned=true): once it's finished with no
     // fds left, the loop closes the pipes and frees it. The client socket goes
     // idle (events 0) until the CGI completes and calls back into on_cgi_done().
-    event_loop.register_fd(cgi->cgi.fd[0], POLLIN, cgi, true);
+    event_loop.register_fd(cgi->cgi.out_fd[0], POLLIN, cgi, true);
     event_loop.register_fd(cgi->cgi.in_fd[1], POLLOUT, cgi, true);
     event_loop.set_events(fd, 0);
 }

@@ -4,7 +4,6 @@
 #include <unistd.h>
 
 #include <cerrno>
-#include <csignal>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -51,9 +50,17 @@ CgiProcess::CgiProcess(const RequestParser& req, const ServerConfig& config,
     exec_status = 0;
     pid = -1;
 
-    if (pipe(fd) == -1 || pipe(in_fd) == -1) {
+    if (pipe(in_fd) == -1) {
         Log::error("CGI pipe FAIL");
         Log::error(std::strerror(errno));
+        exec_status = 500;
+        return;
+    }
+    if (pipe(out_fd) == -1) {
+        Log::error("CGI pipe FAIL");
+        Log::error(std::strerror(errno));
+        close(in_fd[0]);
+        close(in_fd[1]);
         exec_status = 500;
         return;
     }
@@ -66,16 +73,18 @@ CgiProcess::CgiProcess(const RequestParser& req, const ServerConfig& config,
         child_fork();  // never returns
     }
     // parent
-    close(fd[1]);
     close(in_fd[0]);
+    close(out_fd[1]);
     if (pid < 0) {  // failed
-        close(fd[0]);
         close(in_fd[1]);
+        close(out_fd[0]);
         Log::error("CGI fork FAIL");
         Log::error(std::strerror(errno));
         exec_status = 500;  // fork failed -> 500
     }
 }
+
+CgiProcess::~CgiProcess() {}
 
 // Called by CgiHandler once the child closes its stdout (EOF).
 // -> reap it and turn the exit status into an HTTP status (200 / 502 / 504), stored in
@@ -123,17 +132,17 @@ void CgiProcess::child_fork() {
         throw std::runtime_error("CGI child fork fail");
     }
     std::cout << std::flush;
-    if (dup2(fd[1], STDOUT_FILENO) == -1) {
+    if (dup2(out_fd[1], STDOUT_FILENO) == -1) {
         Log::error("DUP2 FAIL");
         Log::error(std::strerror(errno));
         throw std::runtime_error("CGI child fork fail");
     }
 
-    // fd[1] / in_fd[0]: after dup2 these are duplicated onto stdout/stdin. The child
+    // out_fd[1] / in_fd[0]: after dup2 these are duplicated onto stdout/stdin. The child
     // only needs 0 and 1, so the original numbered copies are redundant and get closed
     // for hygiene.
-    close(fd[0]);
-    close(fd[1]);
+    close(out_fd[0]);
+    close(out_fd[1]);
     close(in_fd[0]);
     close(in_fd[1]);
     child_execve();
@@ -182,6 +191,7 @@ void CgiProcess::child_execve() {
     {
         for (t_dict::const_iterator it = req.get_header_ref().begin();
              it != req.get_header_ref().end(); ++it) {
+            if (it->first == "content-length" || it->first == "content-type") continue;
             strings.push_back(httpheader_to_envvar_format(it->first) + "=" + it->second);
         }
     }
