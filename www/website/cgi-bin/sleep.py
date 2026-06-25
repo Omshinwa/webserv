@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 from time import sleep
+
+#include <stdlib.h>
 sleep(20)
 
 # The cgi and cgitb modules were deprecated in Python 3.11 (PEP 594)
