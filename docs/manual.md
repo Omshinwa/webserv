@@ -52,6 +52,8 @@ Typical flow:
     ADDR is set to the address and ADD_LEN set to the length  
     returns a new **connected** socket  
 
+
+socketpair: like pipe()->fd[2] but for sockets -> sv[2]
 ---
 
 **Listening socket (from socket() + bind() + listen())**:
@@ -152,3 +154,13 @@ http://localhost/profile/upload_avatar.py
 pgrep -a webserv          # PID + full command line, filtered by name
 pidof webserv             # just the PID(s)
 watch -n 1 'ps -o pid,rss,vsz,comm -C webserv'
+
+Security
+test the traversal path hack (remonter depuis le root du projet pour chopper des fichiers externes)
+
+    nc localhost 8080
+
+then
+
+    GET /../../../../../../etc/passwd HTTP/1.0
+    Host: localhost

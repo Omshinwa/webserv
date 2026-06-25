@@ -1,18 +1,8 @@
 # Mandatory
-* cookies & session
-* servir plusieurs site web (html) propre
-* read the CGI scripts and html to make sure we understand everything
-
+* read the CGI python scripts and html to make sure we understand everything
+* traversal path hack
 
 # Maybe
 
 * 1.1 HTTP? chunked
 * draw a schema of the whole control flow
-
-# checks to do when we're done
-
-* do stress tests (idk how, basically have tons of connexions to the server)
-* use siege on a normal webpage
-* use siege on a cgi
-* test with a CGI that capitalize the POST
-* try with invalid interpreters

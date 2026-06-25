@@ -65,6 +65,13 @@ void RequestParser::parse_start_line(std::string line) {
         query_string = URI.substr(qpos + 1);
         URI = URI.substr(0, qpos);
     }
+
+    URI = utils::normalize_path(URI);
+    if (URI.empty() || URI[0] != '/' || URI.find("..") != std::string::npos) {
+        state = ERROR;
+        status_code = 400;
+        return;
+    }
 }
 
 // parse a single line
