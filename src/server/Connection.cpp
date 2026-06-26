@@ -52,7 +52,7 @@ void Connection::on_tick(time_t now) {
 }
 
 void Connection::on_readable() {
-    char buf[4096];
+    char buf[409600];
     ssize_t n = recv(fd, buf, sizeof(buf) - 1, 0);
     if (n > 0) {
         touch();

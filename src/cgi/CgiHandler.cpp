@@ -46,7 +46,7 @@ void CgiHandler::finish_writing() {
 void CgiHandler::on_readable() {
     if (finished) return;
 
-    char buf[4096];
+    char buf[409600];
     ssize_t n = read(cgi.out_fd[0], buf, sizeof(buf));
     if (n > 0) {
         touch();

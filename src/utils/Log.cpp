@@ -9,7 +9,7 @@ namespace {
 const std::string black = "\033[30m";
 }
 
-Log::Level Log::_level = Log::DEBUG;
+Log::Level Log::_level = Log::INFO;
 
 int Log::color_idx = 0;
 const std::string Log::red = "\033[31m";
