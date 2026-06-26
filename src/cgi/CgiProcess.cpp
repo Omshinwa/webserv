@@ -160,13 +160,15 @@ void CgiProcess::child_execve() {
     {
         strings.push_back("REQUEST_METHOD=" + req.method);
         if (req.body.size()) {
-            strings.push_back("CONTENT_LENGTH=" + req.get_header("content-length"));
+            // Use the decoded body length: a chunked request has no
+            // Content-Length header
+            strings.push_back("CONTENT_LENGTH=" + utils::to_str(req.body.size()));
             strings.push_back("CONTENT_TYPE=" + req.get_header("content-type"));
         }
         strings.push_back("QUERY_STRING=" + req.query_string);
         strings.push_back("SERVER_PROTOCOL=HTTP/1.0");
         strings.push_back("GATEWAY_INTERFACE=CGI/1.1");
-        strings.push_back("SCRIPT_NAME="); // 42 tester is buggy so we do that
+        strings.push_back("SCRIPT_NAME=");  // 42 tester is buggy so we do that
         // if (interpreter.find("php-cgi") != std::string::npos) {
         strings.push_back("SCRIPT_FILENAME=" + file);
         strings.push_back("REDIRECT_STATUS=200");

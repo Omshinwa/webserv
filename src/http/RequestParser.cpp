@@ -33,6 +33,7 @@ RequestParser::RequestParser(std::string& buffer)
           status_code(0),
           config(NULL),
           content_length(0),
+          is_chunked(false),
           buffer(buffer),
           scan_pos(0) {}
 
@@ -118,8 +119,25 @@ void RequestParser::parse_header(std::string header_data, std::string delim) {
         return;
     }
 
+    // Transfer-Encoding: chunked means the body is framed in chunks and there
+    // is no Content-Length. We treat the body as chunked as long as "chunked"
+    // appears in the value (e.g. "gzip, chunked").
+    if (header.count("transfer-encoding") &&
+        utils::to_lower(header["transfer-encoding"]).find("chunked") != std::string::npos) {
+        is_chunked = true;
+    }
+
+    // Content-Length and Transfer-Encoding are mutually exclusive
+    if (is_chunked && header.count("content-length")) {
+        state = ERROR;
+        status_code = 400;
+        return;
+    }
+
     // Parse Content-Length now if present
-    if (header.find("content-length") == header.end()) {
+    if (is_chunked) {
+        Log::debug("Chunked transfer encoding");
+    } else if (header.find("content-length") == header.end()) {
         Log::debug("No content length!");
     } else {
         Log::debug("Content length: " + header["content-length"]);
@@ -177,6 +195,10 @@ void RequestParser::parse() {
         buffer = buffer.substr(header_end + delim.length() * 2);
     }
     if (state == INCOMPLETE_BODY) {
+        if (is_chunked) {
+            decode_chunked();
+            return;
+        }
         if (buffer.size() < content_length) return;
 
         body = buffer.substr(0, content_length);
@@ -186,11 +208,74 @@ void RequestParser::parse() {
     }
 }
 
+// Decode a chunked request body. Each chunk is:
+//   <hex-size>[;ext]\r\n<data>\r\n
+// and the body ends with a zero-size chunk: 0\r\n[trailers]\r\n
+//
+// Called repeatedly as bytes arrive: we consume whole chunks from the front of
+// `buffer`, leaving any partial chunk behind for the next read. State stays
+// INCOMPLETE_BODY until the terminating zero chunk, then flips to COMPLETE.
+void RequestParser::decode_chunked() {
+    while (true) {
+        // The chunk-size line ends at the first CRLF.
+        size_t line_end = buffer.find("\r\n");
+        if (line_end == std::string::npos) return;  // size line not fully here yet
+
+        // Strip any chunk extensions (";name=value") before the size.
+        std::string size_line = buffer.substr(0, line_end);
+        size_t semi = size_line.find(';');
+        if (semi != std::string::npos) size_line = size_line.substr(0, semi);
+
+        char* end;
+        errno = 0;
+        long chunk_size = std::strtol(size_line.c_str(), &end, 16);
+        if (end == size_line.c_str() || *end != '\0' || errno == ERANGE || chunk_size < 0) {
+            state = ERROR;
+            status_code = 400;
+            return;
+        }
+
+        // Zero-size chunk: end of body. Consume the optional trailer section,
+        // which is terminated by a blank line (the CRLF right after "0").
+        if (chunk_size == 0) {
+            size_t trailer_end = buffer.find("\r\n\r\n");
+            if (trailer_end == std::string::npos) return;  // wait for terminating CRLF
+            buffer = buffer.substr(trailer_end + 4);
+            state = COMPLETE;
+            Log::debug("REQUEST BODY: " + body);
+            return;
+        }
+
+        // Need the data plus its trailing CRLF before we can take the chunk.
+        size_t data_start = line_end + 2;
+        size_t need = data_start + static_cast<size_t>(chunk_size) + 2;
+        if (buffer.size() < need) return;  // chunk not fully arrived
+
+        body.append(buffer, data_start, static_cast<size_t>(chunk_size));
+        if (config && body.size() > config->client_max_body_size) {
+            state = ERROR;
+            status_code = 413;
+            Log::error("Chunked body exceeds client_max_body_size " +
+                       utils::to_str(config->client_max_body_size));
+            return;
+        }
+        buffer = buffer.substr(need);
+    }
+}
+
 // Called by the Connection with the virtual host it resolved from get_host().
 // This is where we know client_max_body_size, so the 413 check lives here.
 void RequestParser::set_config(const ServerConfig& cfg) {
     config = &cfg;
     if (state != AWAITING_CONFIG) return;
+
+    // Chunked body: size is unknown up front, so we can't do the 413 check here.
+    // Enter INCOMPLETE_BODY; decode_chunked() enforces client_max_body_size as
+    // it accumulates the decoded bytes.
+    if (is_chunked) {
+        state = INCOMPLETE_BODY;
+        return;
+    }
 
     // No Content-Length means no body, so the request is already complete.
     // only true in HTTP 1.0, otherwise chunks

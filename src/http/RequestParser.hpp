@@ -47,6 +47,7 @@ class RequestParser {
         const ServerConfig* config;  // currently not used anywhere?
 
         size_t content_length;  // parsed content length
+        bool is_chunked;        // Transfer-Encoding: chunked
 
         std::string& buffer;
         size_t scan_pos;  // we scan the buffer until we find \r\n\r\n
@@ -54,6 +55,7 @@ class RequestParser {
         void parse_header(std::string header_data, std::string delim);
         void parse_start_line(std::string line);
         void parse_header_line(std::string line);
+        void decode_chunked();  // consume chunked body from buffer into `body`
 
         // INACCESSIBLE
         RequestParser();
