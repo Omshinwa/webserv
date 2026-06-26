@@ -166,7 +166,8 @@ void CgiProcess::child_execve() {
         strings.push_back("QUERY_STRING=" + req.query_string);
         strings.push_back("SERVER_PROTOCOL=HTTP/1.0");
         strings.push_back("GATEWAY_INTERFACE=CGI/1.1");
-        strings.push_back("SCRIPT_NAME=");  // 42 tester bug
+        strings.push_back("SCRIPT_NAME=" + file);  // 42 tester bug
+        Log::debug("filename:" + file);
         // if (interpreter.find("php-cgi") != std::string::npos) {
         strings.push_back("SCRIPT_FILENAME=" + file);
         strings.push_back("REDIRECT_STATUS=200");

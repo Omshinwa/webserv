@@ -59,6 +59,7 @@ void CgiHandler::on_readable() {
         cgi.kill_child();       // pipe error: don't leave the child running
         cgi.exec_status = 502;  // Bad Gateway
     }
+    Log::debug("cgi: " + read_buffer);
     complete();
 }
 

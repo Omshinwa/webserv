@@ -40,18 +40,11 @@ That's the document to cite. The environment variables are in §4.1 and the meta
 
 siege -b http://127.0.0.1:8080/
 
-
-http://localhost/profile/upload_avatar.py
-
-
-    location /profile {
-        methods GET POST;
-        root    www/cgi-bin/
-    }
-
+## check the usage by a process
 
 pgrep -a webserv          # PID + full command line, filtered by name
 pidof webserv             # just the PID(s)
+
 watch -n 1 'ps -o pid,rss,vsz,comm -C webserv'
 
 Security
