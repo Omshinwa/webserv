@@ -127,8 +127,10 @@ bool ResponseBuilder::dispatch_cgi_path_info(const std::string& root) {
     for (size_t i = 1; i < uri.size(); ++i) {
         if (uri[i] != '/') continue;
         std::string fs = map_path(uri.substr(0, i), root);
-        if (!utils::is_regular_file(fs)) continue;
-        return is_cgi_request(fs);  // first file wins; PATH_INFO is the remainder
+        if (!is_cgi_request(fs)) continue;
+        // first file wins; PATH_INFO is the remainder
+
+        return true;
     }
     return false;
 }

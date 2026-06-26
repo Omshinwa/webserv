@@ -253,12 +253,7 @@ void ResponseBuilder::handle_post() {
     // POST to an existing CGI script runs it (the body is piped to the script's
     // stdin) rather than treating the request as a file upload.
     std::string script_path = map_path(this->req->URI, root);
-    if (utils::is_regular_file(script_path)) {
-        if (is_cgi_request(script_path)) return;
-    } else if (dispatch_cgi_path_info(root)) {
-        // CGI script reached through trailing PATH_INFO
-        return;
-    }
+    if (is_cgi_request(script_path) || dispatch_cgi_path_info(root)) return;
 
     std::string upload_path;
 
@@ -272,7 +267,7 @@ void ResponseBuilder::handle_post() {
         }
         upload_path = utils::join_path(location->upload_dir, filename);
     } else {
-        status_code = 403;
+        status_code = 404;
         return;
     }
 
@@ -315,7 +310,7 @@ void ResponseBuilder::handle_delete() {
         return;
     }
     if (!utils::is_regular_file(filepath)) {
-        status_code = 403;
+        status_code = 404;
         return;
     }
 
@@ -395,7 +390,8 @@ std::string ResponseBuilder::build() {
                 if (error_res.status_code == 200 || error_res.status_code >= 400)
                     error_res.status_code = status_code;  //   keep the old code
                 else {
-                    // else 3xx: handle_get hit a `return`  -> leave it -> client sees 301
+                    // else 3xx: handle_get hit a `return`  -> leave it -> client sees
+                    // 301
                 }
                 error_res.req = NULL;  // prevent infinite loop
                 return error_res.build();

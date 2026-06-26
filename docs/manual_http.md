@@ -56,3 +56,12 @@ then
 
 GET /../../../../../../etc/passwd HTTP/1.0
 Host: localhost
+
+
+
+# test netcat
+POST /directory/youpla.bla HTTP/1.0
+Host: localhost
+Content-Length: 20
+
+4444444444444455555555555555555555555555555555555555555555555555

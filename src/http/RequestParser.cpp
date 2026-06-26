@@ -123,7 +123,8 @@ void RequestParser::parse_header(std::string header_data, std::string delim) {
     // is no Content-Length. We treat the body as chunked as long as "chunked"
     // appears in the value (e.g. "gzip, chunked").
     if (header.count("transfer-encoding") &&
-        utils::to_lower(header["transfer-encoding"]).find("chunked") != std::string::npos) {
+        utils::to_lower(header["transfer-encoding"]).find("chunked") !=
+                std::string::npos) {
         is_chunked = true;
     }
 
@@ -204,7 +205,7 @@ void RequestParser::parse() {
         body = buffer.substr(0, content_length);
         state = COMPLETE;
 
-        Log::debug("REQUEST BODY: " + body);
+        // Log::debug("REQUEST BODY: " + body);
     }
 }
 
@@ -229,7 +230,8 @@ void RequestParser::decode_chunked() {
         char* end;
         errno = 0;
         long chunk_size = std::strtol(size_line.c_str(), &end, 16);
-        if (end == size_line.c_str() || *end != '\0' || errno == ERANGE || chunk_size < 0) {
+        if (end == size_line.c_str() || *end != '\0' || errno == ERANGE ||
+            chunk_size < 0) {
             state = ERROR;
             status_code = 400;
             return;
@@ -242,7 +244,7 @@ void RequestParser::decode_chunked() {
             if (trailer_end == std::string::npos) return;  // wait for terminating CRLF
             buffer = buffer.substr(trailer_end + 4);
             state = COMPLETE;
-            Log::debug("REQUEST BODY: " + body);
+            // Log::debug("REQUEST BODY: " + body);
             return;
         }
 
