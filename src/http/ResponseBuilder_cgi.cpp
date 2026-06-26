@@ -126,7 +126,7 @@ bool ResponseBuilder::dispatch_cgi_path_info(const std::string& root) {
     // the caller and is already known not to be a plain file.
     for (size_t i = 1; i < uri.size(); ++i) {
         if (uri[i] != '/') continue;
-        std::string fs = utils::join_path(root, uri.substr(0, i));
+        std::string fs = map_path(uri.substr(0, i), root);
         if (!utils::is_regular_file(fs)) continue;
         return is_cgi_request(fs);  // first file wins; PATH_INFO is the remainder
     }

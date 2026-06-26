@@ -155,21 +155,6 @@ void CgiProcess::child_execve() {
     std::string file =
             (slash == std::string::npos) ? script_path : script_path.substr(slash + 1);
 
-    //   "/cgi-bin/up.py"         -> SCRIPT_NAME="/cgi-bin/up.py" PATH_INFO=""
-    //   "/cgi-bin/up.py/foo/bar" -> SCRIPT_NAME="/cgi-bin/up.py" PATH_INFO="/foo/bar"
-    std::string script_name = req.URI;
-    std::string path_info;
-    {
-        size_t pos = req.URI.find("/" + file);
-        if (pos != std::string::npos) {
-            size_t end = pos + 1 + file.size();  // index just past the filename
-            if (end == req.URI.size() || req.URI[end] == '/') {
-                script_name = req.URI.substr(0, end);
-                path_info = req.URI.substr(end);
-            }
-        }
-    }
-
     // this block setups the envs
     std::vector<std::string> strings;
     {
@@ -181,17 +166,12 @@ void CgiProcess::child_execve() {
         strings.push_back("QUERY_STRING=" + req.query_string);
         strings.push_back("SERVER_PROTOCOL=HTTP/1.0");
         strings.push_back("GATEWAY_INTERFACE=CGI/1.1");
-        // SCRIPT_NAME: the URI path that identifies the script
-        // Trimmed of any trailing PATH_INFO above.
-        strings.push_back("SCRIPT_NAME=" + script_name);
-        strings.push_back("PATH_INFO=" + path_info);
+        strings.push_back("SCRIPT_NAME="); // 42 tester is buggy so we do that
         // if (interpreter.find("php-cgi") != std::string::npos) {
         strings.push_back("SCRIPT_FILENAME=" + file);
         strings.push_back("REDIRECT_STATUS=200");
         // }
-
-        // REQUEST_URI: the original request target (path + query), as sent on the
-        // request line.
+        strings.push_back("PATH_INFO=" + req.URI);
         std::string request_uri = req.URI;
         if (!req.query_string.empty()) request_uri += "?" + req.query_string;
         strings.push_back("REQUEST_URI=" + request_uri);

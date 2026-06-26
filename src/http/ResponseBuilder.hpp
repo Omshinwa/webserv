@@ -44,6 +44,9 @@ class ResponseBuilder {
         bool is_cgi_request(const std::string& filepath);
         // Walk the URI to find a CGI script with trailing PATH_INFO
         bool dispatch_cgi_path_info(const std::string& root);
+        // Map a URI (or prefix) to a filesystem path, stripping the location
+        // prefix before joining `root` (alias semantics).
+        std::string map_path(const std::string& uri, const std::string& root) const;
 
         void parse_cgi_response(std::string raw);
 

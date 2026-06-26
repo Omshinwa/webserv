@@ -130,8 +130,8 @@ void RequestParser::parse_header(std::string header_data, std::string delim) {
     }
 
     state = AWAITING_CONFIG;
-    Log::debug("HEADER OK");
     Log::event("< " + method + " " + URI + " " + get_header("host"));
+    Log::debug("HEADER OK");
 }
 
 void RequestParser::parse() {
@@ -181,6 +181,8 @@ void RequestParser::parse() {
 
         body = buffer.substr(0, content_length);
         state = COMPLETE;
+
+        Log::debug("REQUEST BODY: " + body);
     }
 }
 

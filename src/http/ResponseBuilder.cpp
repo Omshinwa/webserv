@@ -140,6 +140,21 @@ std::string capitalize_header(std::string s) {
 }
 }  // namespace
 
+// Map a request URI (or a prefix of it) to a filesystem path. The matched
+// location's path prefix is stripped before joining with `root`, so the URI
+// segments below the location -- not the location name itself -- determine the
+// on-disk path. E.g. location /kapouet with root /tmp/www:
+//   /kapouet/pouic/toto/pouet -> /tmp/www/pouic/toto/pouet
+std::string ResponseBuilder::map_path(const std::string& uri,
+                                      const std::string& root) const {
+    std::string rest = uri;
+    if (location != NULL && uri.size() >= location->path.size() &&
+        uri.compare(0, location->path.size(), location->path) == 0) {
+        rest = uri.substr(location->path.size());
+    }
+    return utils::join_path(root, rest);
+}
+
 // find the matching location config
 void ResponseBuilder::find_location() {
     const LocationConfig* best = NULL;
@@ -176,7 +191,7 @@ void ResponseBuilder::handle_get() {
     }
     // check for root + URI request
     const std::string& root = location->has_root ? location->root : config.root;
-    std::string filepath = utils::join_path(root, this->req->URI);
+    std::string filepath = map_path(this->req->URI, root);
 
     if (!utils::file_exists(filepath)) {
         if (dispatch_cgi_path_info(root)) return;
@@ -189,7 +204,7 @@ void ResponseBuilder::handle_get() {
     if (utils::is_directory(filepath)) {
         const std::string& index = location->has_index ? location->index : config.index;
         std::string index_path = utils::join_path(filepath, index);
-
+        Log::debug("filepath:" + index_path);
         if (!index.empty() && utils::is_regular_file(index_path)) {
             filepath = index_path;  // serve the index file below
         } else {
@@ -202,7 +217,7 @@ void ResponseBuilder::handle_get() {
                 Log::event("Generated autoindex for `" + filepath + "`");
                 return;
             }
-            status_code = 403;  // directory, no index, no autoindex
+            status_code = 404;  // directory, no index, no autoindex // EDITED
             return;
         }
     }
@@ -237,7 +252,7 @@ void ResponseBuilder::handle_post() {
 
     // POST to an existing CGI script runs it (the body is piped to the script's
     // stdin) rather than treating the request as a file upload.
-    std::string script_path = utils::join_path(root, this->req->URI);
+    std::string script_path = map_path(this->req->URI, root);
     if (utils::is_regular_file(script_path)) {
         if (is_cgi_request(script_path)) return;
     } else if (dispatch_cgi_path_info(root)) {
@@ -293,7 +308,7 @@ void ResponseBuilder::handle_post() {
 
 void ResponseBuilder::handle_delete() {
     const std::string& root = location->has_root ? location->root : config.root;
-    std::string filepath = utils::join_path(root, this->req->URI);
+    std::string filepath = map_path(this->req->URI, root);
 
     if (!utils::file_exists(filepath)) {
         status_code = 404;
