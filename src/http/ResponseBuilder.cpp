@@ -193,8 +193,9 @@ void ResponseBuilder::handle_get() {
     const std::string& root = location->has_root ? location->root : config.root;
     std::string filepath = map_path(this->req->URI, root);
 
-    if (!utils::file_exists(filepath)) {
-        if (dispatch_cgi_path_info(root)) return;
+    if (dispatch_cgi_path_info(root))
+        return;
+    else if (!utils::file_exists(filepath)) {
         status_code = 404;
         return;
     }
@@ -204,10 +205,12 @@ void ResponseBuilder::handle_get() {
     if (utils::is_directory(filepath)) {
         const std::string& index = location->has_index ? location->index : config.index;
         std::string index_path = utils::join_path(filepath, index);
-        Log::debug("filepath:" + index_path);
         if (!index.empty() && utils::is_regular_file(index_path)) {
             filepath = index_path;  // serve the index file below
-        } else {
+            Log::debug("filepath:" + filepath);
+        } else {  // do autoindex
+
+            Log::debug("filepath:" + filepath);
             bool autoindex =
                     location->has_autoindex ? location->autoindex : config.autoindex;
             if (autoindex) {
