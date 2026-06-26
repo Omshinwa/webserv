@@ -25,6 +25,30 @@ bool parse_size_t(const char* s, size_t& output) {
     output = static_cast<size_t>(cl);
     return true;
 }
+
+// Helper to check if the URI matches a location path segment boundary
+bool path_matches(const std::string& uri, const std::string& path) {
+    if (!utils::starts_with(uri, path)) return false;
+    if (uri.size() == path.size()) return true;     // exact match
+    if (path[path.size() - 1] == '/') return true;  // path already ends at a separator
+    return uri[path.size()] == '/';                 // real segment boundary
+}
+
+// Helper to find the effective client_max_body_size considering location blocks
+size_t get_effective_max_body_size(const ServerConfig& cfg, const std::string& uri) {
+    const LocationConfig* best = NULL;
+    for (size_t i = 0; i < cfg.locations.size(); ++i) {
+        if (path_matches(uri, cfg.locations[i].path)) {
+            if (best == NULL || cfg.locations[i].path.size() > best->path.size()) {
+                best = &cfg.locations[i];
+            }
+        }
+    }
+    if (best && best->has_client_max_body_size) {
+        return best->client_max_body_size;
+    }
+    return cfg.client_max_body_size;
+}
 }  // namespace
 
 // The parser shares the buffer with Connection
@@ -254,12 +278,15 @@ void RequestParser::decode_chunked() {
         if (buffer.size() < need) return;  // chunk not fully arrived
 
         body.append(buffer, data_start, static_cast<size_t>(chunk_size));
-        if (config && body.size() > config->client_max_body_size) {
-            state = ERROR;
-            status_code = 413;
-            Log::error("Chunked body exceeds client_max_body_size " +
-                       utils::to_str(config->client_max_body_size));
-            return;
+        if (config) {
+            size_t max_body_size = get_effective_max_body_size(*config, URI);
+            if (body.size() > max_body_size) {
+                state = ERROR;
+                status_code = 413;
+                Log::error("Chunked body exceeds client_max_body_size " +
+                           utils::to_str(max_body_size));
+                return;
+            }
         }
         buffer = buffer.substr(need);
     }
@@ -285,12 +312,13 @@ void RequestParser::set_config(const ServerConfig& cfg) {
         state = COMPLETE;
         return;
     }
-    if (content_length > cfg.client_max_body_size) {
+
+    size_t max_body_size = get_effective_max_body_size(cfg, URI);
+    if (content_length > max_body_size) {
         state = ERROR;
         status_code = 413;
         Log::error("Body size " + utils::to_str(content_length) +
-                   " exceeds client_max_body_size " +
-                   utils::to_str(cfg.client_max_body_size));
+                   " exceeds client_max_body_size " + utils::to_str(max_body_size));
         return;
     }
     state = INCOMPLETE_BODY;

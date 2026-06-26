@@ -74,7 +74,7 @@ void Server::create_socket(const std::string& host, int port) {
 
     // listen
     {
-        const int MAX_CONNECTION = 10;
+        const int MAX_CONNECTION = 10000;
         if (listen(fd, MAX_CONNECTION) < 0) {
             close(fd);
             std::cerr << Log::red_bg << "listen error" << Log::nl;

@@ -6,6 +6,7 @@
 #include <vector>
 
 struct LocationConfig {
+        size_t client_max_body_size;
         std::vector<std::string> methods;
         std::string path;
         std::string root;
@@ -21,6 +22,7 @@ struct LocationConfig {
         bool has_autoindex;
         bool has_methods;
         bool has_upload;
+        bool has_client_max_body_size;
 
         LocationConfig();
 };

@@ -5,7 +5,7 @@
 #include "../utils/Log.hpp"
 
 namespace {
-const int CGI_TIMEOUT_SEC = 5;
+const int CGI_TIMEOUT_SEC = 500;
 }  // namespace
 
 CgiHandler::CgiHandler(Reactor& reactor, RequestParser& req, const ServerConfig& config,

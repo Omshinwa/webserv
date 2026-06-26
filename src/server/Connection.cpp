@@ -13,7 +13,7 @@
 #include "../utils/Utils.hpp"
 
 namespace {
-const time_t CONNECTION_TIMEOUT_SEC = 100;
+const time_t CONNECTION_TIMEOUT_SEC = 1000;
 }  // namespace
 
 // Connection handles the buffers for reading and writing

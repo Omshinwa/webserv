@@ -7,7 +7,7 @@
 #include "signal.hpp"
 
 namespace {
-const int POLL_TIMEOUT_MS = 1000;
+const int POLL_TIMEOUT_MS = 10000;
 }  // namespace
 
 Reactor::Reactor() {}

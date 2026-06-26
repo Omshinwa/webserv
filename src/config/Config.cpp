@@ -5,13 +5,15 @@
 #include "../utils/Utils.hpp"
 
 LocationConfig::LocationConfig()
-        : autoindex(false),
+        : client_max_body_size(0),
+          autoindex(false),
           redirect_code(0),
           has_root(false),
           has_index(false),
           has_autoindex(false),
           has_methods(false),
-          has_upload(false) {}
+          has_upload(false),
+          has_client_max_body_size(false) {}
 
 ServerConfig::ServerConfig()
         : host("0.0.0.0"),
@@ -160,6 +162,11 @@ class Parser {
                         fail("'autoindex' expects 'on' or 'off'");
                     loc.autoindex = (args[0] == "on");
                     loc.has_autoindex = true;
+                } else if (name == "client_max_body_size") {
+                    if (args.size() != 1 ||
+                        !utils::parse_size(args[0], loc.client_max_body_size))
+                        fail("invalid client_max_body_size in location");
+                    loc.has_client_max_body_size = true;
                 } else if (name == "return" || name == "redirect") {
                     if (args.size() == 1) {
                         loc.redirect_code = 302;
