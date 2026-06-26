@@ -212,6 +212,7 @@ void CgiProcess::child_execve() {
     argv.push_back(NULL);
 
     const char* path = interpreter.empty() ? file.c_str() : interpreter.c_str();
+    Log::error("event:" + utils::to_str(path));
     execve(path, argv.data(), cstrings.data());
 
     Log::error("EXECVE FAIL");
