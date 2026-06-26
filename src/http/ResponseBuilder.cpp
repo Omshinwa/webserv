@@ -179,6 +179,7 @@ void ResponseBuilder::handle_get() {
     std::string filepath = utils::join_path(root, this->req->URI);
 
     if (!utils::file_exists(filepath)) {
+        if (dispatch_cgi_path_info(root)) return;
         status_code = 404;
         return;
     }
@@ -237,7 +238,12 @@ void ResponseBuilder::handle_post() {
     // POST to an existing CGI script runs it (the body is piped to the script's
     // stdin) rather than treating the request as a file upload.
     std::string script_path = utils::join_path(root, this->req->URI);
-    if (utils::is_regular_file(script_path) && is_cgi_request(script_path)) return;
+    if (utils::is_regular_file(script_path)) {
+        if (is_cgi_request(script_path)) return;
+    } else if (dispatch_cgi_path_info(root)) {
+        // CGI script reached through trailing PATH_INFO
+        return;
+    }
 
     std::string upload_path;
 

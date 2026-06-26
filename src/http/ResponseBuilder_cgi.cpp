@@ -114,3 +114,21 @@ bool ResponseBuilder::is_cgi_request(const std::string& filepath) {
     cgi_filepath = filepath;
     return true;
 }
+
+// Walk the URI path segments left to right and stop at the first one that
+// resolves to a regular file on disk -- the CGI script. Everything after it is
+// PATH_INFO (computed later in CgiProcess from req->URI), e.g.
+// "/cgi-bin/up.py/foo/bar" resolves to the script "/cgi-bin/up.py". Returns
+// true (and dispatches via is_cgi_request) only if that file is a CGI script.
+bool ResponseBuilder::dispatch_cgi_path_info(const std::string& root) {
+    const std::string& uri = req->URI;
+    // Only proper prefixes ending at a '/' boundary; the full URI is handled by
+    // the caller and is already known not to be a plain file.
+    for (size_t i = 1; i < uri.size(); ++i) {
+        if (uri[i] != '/') continue;
+        std::string fs = utils::join_path(root, uri.substr(0, i));
+        if (!utils::is_regular_file(fs)) continue;
+        return is_cgi_request(fs);  // first file wins; PATH_INFO is the remainder
+    }
+    return false;
+}

@@ -184,8 +184,10 @@ blocking.
 
 Classic references used while building this project:
 
-- **RFC 1945** — *Hypertext Transfer Protocol — HTTP/1.0* :  http://abcdrfc.free.fr/rfc-vf/rfc1945.html
-- **RFC 3875** — *The Common Gateway Interface (CGI) Version 1.1* : https://fr-academic.com/dic.nsf/frwiki/399061
+- **RFC 1945** — *Hypertext Transfer Protocol — HTTP/1.0* :  http://abcdrfc.free.fr/rfc-vf/rfc1945.html (FR)
+https://datatracker.ietf.org/doc/html/rfc1945 (ENG)
+- **RFC 3875** — *The Common Gateway Interface (CGI) Version 1.1* : https://fr-academic.com/dic.nsf/frwiki/399061 (FR)
+https://datatracker.ietf.org/doc/html/rfc3875 (ENG)
 - **Beej's Guide to Network Programming** — <https://beej.us/guide/bgnet/>
 - Linux man pages: `socket(2)`, `bind(2)`, `listen(2)`, `accept(2)`,
   `poll(2)`, `fcntl(2)`, `recv(2)`, `send(2)`, `fork(2)`, `execve(2)`,

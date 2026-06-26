@@ -42,6 +42,8 @@ class ResponseBuilder {
         void handle_post();
         void handle_delete();
         bool is_cgi_request(const std::string& filepath);
+        // Walk the URI to find a CGI script with trailing PATH_INFO
+        bool dispatch_cgi_path_info(const std::string& root);
 
         void parse_cgi_response(std::string raw);
 
